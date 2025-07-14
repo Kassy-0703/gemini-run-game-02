@@ -1,5 +1,5 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const cors = require('cors'); // CORSミドルウェアをインポート
 
 const app = express();
