@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新郎新婦の筑波ダッシュ！ (仮)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- アイコンライブラリの読み込みを修正 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { -webkit-user-select: none; user-select: none; }
+        .screen { display: none; }
+        .screen.active { display: flex; }
+        canvas { background-color: #ffffff; border: 2px solid #333; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans">
+
+    <div id="game-container" class="w-full max-w-2xl mx-auto p-4 text-center">
+        <div id="title-screen" class="screen active flex-col items-center justify-center space-y-8">
+            <img src="images/title.png" alt="ゲームタイトル画像" class="w-full max-w-lg mx-auto mb-8 rounded-lg shadow-lg">
+            <div class="space-y-4 mb-8">
+                <button id="ranking-button" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg text-xl flex items-center justify-center space-x-2">
+                    <i data-lucide="trophy"></i>
+                    <span>ランキング</span>
+                </button>
+            </div>
+            
+            
+            
+            <div class="bg-gradient-to-br from-blue-100 to-purple-100 p-8 rounded-xl shadow-2xl text-left w-full max-w-md mb-8 border-4 border-blue-400 transform hover:scale-105 transition-transform duration-300">
+                <h2 class="text-3xl font-extrabold mb-6 text-center text-blue-700 drop-shadow-md">遊び方</h2>
+                <ul class="list-disc list-inside space-y-3 text-gray-800 text-lg">
+                    <li><strong>目的:</strong> 障害物を避けながら、できるだけ長く走り続け、ハイスコアを目指そう！</li>
+                    <li><strong>操作:</strong> ボタンをタップしてジャンプ！２段ジャンプもできるよ！</li>
+                    <li><strong>アイテム:</strong>
+                        <ul class="list-circle list-inside ml-6 mt-2 space-y-2">
+                            <li><img src="images/item_score_up.png" alt="スコアアップ" class="w-6 h-6 inline-block mr-2 align-middle"> <span class="font-semibold">スコアアップ:</span> スコアが500点アップ！</li>
+                            <li><img src="images/item_invincible.png" alt="無敵" class="w-6 h-6 inline-block mr-2 align-middle"> <span class="font-semibold">無敵:</span> 5秒間だけ障害物をすり抜ける！</li>
+                            <li><img src="images/item_speed_up.png" alt="スピードアップ" class="w-6 h-6 inline-block mr-2 align-middle"> <span class="font-semibold">スピードアップ:</span> 7秒間だけ移動速度がアップ！</li>
+                            <li><img src="images/item_jump_up.png" alt="ジャンプ力アップ" class="w-6 h-6 inline-block mr-2 align-middle"> <span class="font-semibold">ジャンプ力アップ:</span> 10秒間だけジャンプが高くなる！</li>
+                        </ul>
+                    </li>
+                    <li><strong>ゲームオーバー:</strong> 障害物にぶつかるか、タイマーが0になるとゲームオーバー。</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="game-screen" class="screen flex-col items-center relative">
+            <div class="w-full flex justify-between text-2xl font-bold p-2">
+                <div>スコア: <span id="score-display">0</span></div>
+                <div>タイム: <span id="timer-display">60</span></div>
+            </div>
+            <div id="effect-display" class="absolute top-14 bg-yellow-200 text-yellow-800 font-bold px-4 py-2 rounded-full shadow-lg text-lg transition-opacity duration-300 opacity-0"></div>
+            <canvas id="game-canvas"></canvas>
+            <p class="mt-2 text-gray-600">クリックまたはタップでジャンプ！</p>
+            <button id="jump-button" class="mt-4 bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-xl">ジャンプ！</button>
+            <div class="mt-4 p-4 bg-gray-200 rounded-lg text-left text-sm w-full shadow-inner">
+                <h3 class="font-bold text-center mb-2 text-gray-800">アイテムの効果</h3>
+                <div class="space-y-2">
+                    <div class="flex items-center"><img src="images/item_score_up.png" alt="スコアアップ" class="w-5 h-5 mr-3"><span><strong>スコアアップ:</strong> スコアが500点アップ！</span></div>
+                <div class="flex items-center"><img src="images/item_invincible.png" alt="無敵" class="w-5 h-5 mr-3"><span><strong>無敵:</strong> 5秒間だけ障害物をすり抜ける！</span></div>
+                <div class="flex items-center"><img src="images/item_speed_up.png" alt="スピードアップ" class="w-5 h-5 mr-3"><span><strong>スピードアップ:</strong> 7秒間だけ移動速度がアップ！</span></div>
+                <div class="flex items-center"><img src="images/item_jump_up.png" alt="ジャンプ力アップ" class="w-5 h-5 mr-3"><span><strong>ジャンプ力アップ:</strong> 10秒間だけジャンプが高くなる！</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-over-screen" class="screen flex-col items-center justify-center space-y-6">
+            <h2 class="text-5xl font-bold text-red-500">Game Over</h2>
+            <p class="text-2xl">最終スコア: <span id="final-score">0</span></p>
+            <form id="ranking-form" class="w-full max-w-sm space-y-4">
+                <input type="text" id="player-name" placeholder="プレイヤー名を入力" class="w-full p-3 border rounded-lg text-center" required maxlength="10">
+                <button type="submit" class="w-full bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-xl">ランキングに登録</button>
+            </form>
+            <button id="back-to-title-from-gameover" class="mt-4 text-gray-600 hover:underline">タイトルへ戻る</button>
+        </div>
+
+        <div id="ranking-screen" class="screen flex-col items-center justify-center w-full">
+            <h2 class="text-4xl font-bold mb-6">ランキング</h2>
+            <ol id="ranking-list" class="list-decimal list-inside bg-white p-6 rounded-lg shadow-md w-full max-w-md text-left space-y-2"></ol>
+            <button id="back-to-title-button" class="mt-8 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">タイトルへ戻る</button>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM要素の取得 ---
+    const screens = { title: document.getElementById('title-screen'), game: document.getElementById('game-screen'), gameOver: document.getElementById('game-over-screen'), ranking: document.getElementById('ranking-screen'), };
+    const rankingButton = document.getElementById('ranking-button');
+    const backToTitleButton = document.getElementById('back-to-title-button');
+    const backToTitleFromGameOver = document.getElementById('back-to-title-from-gameover');
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreDisplay = document.getElementById('score-display');
+    const timerDisplay = document.getElementById('timer-display');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const rankingForm = document.getElementById('ranking-form');
+    const playerNameInput = document.getElementById('player-name');
+    const rankingList = document.getElementById('ranking-list');
+    const effectDisplay = document.getElementById('effect-display');
+    const jumpButton = document.getElementById('jump-button');
+
+    // --- ゲーム設定 ---
+    const GRAVITY = 0.6;
+    const BASE_JUMP_FORCE = -15;
+    const PLAYER_WIDTH = 60;
+    const PLAYER_HEIGHT = 60;
+    const TARGET_GAME_WIDTH = 900; // 内部的なゲームの幅をさらに調整
+    const TARGET_GAME_HEIGHT = 500; // 内部的なゲームの高さをさらに調整
+    let GROUND_HEIGHT; // 動的に設定
+
+    // --- ゲーム状態変数 ---
+    let player, obstacles, items, score, baseSpeed, gameSpeed, timer, gameInterval, animationFrameId, visualEffects, frameCount, playerHistory = []; // playerHistoryを初期化
+    let gameState = 'title';
+    let backgroundScrollX = 0, groundX = 0; // 背景・地面のスクロール位置
+    let spawnCooldown = 0;
+    let itemSpawnCooldown = 0;
+    let invincibilityTimer = 0;
+    let speedUpTimer = 0;
+    let jumpUpTimer = 0;
+
+    // --- アセット管理 ---
+    const ASSET_PATHS = {
+        player: 'images/player.png',
+        obstacleLow: 'images/obstacle_low.png',
+        obstacleHigh: 'images/obstacle_high.png',
+        fallingObstacle: 'images/falling_obstacle.png',
+        fastObstacle: 'images/fast_obstacle.png',
+        itemScoreUp: 'images/item_score_up.png',
+        itemInvincible: 'images/item_invincible.png',
+        itemInvincibleEffect: 'images/item_invincible_02.png', // 無敵エフェクト用
+        itemSpeedUp: 'images/item_speed_up.png',
+        itemJumpUp: 'images/item_jump_up.png',
+        ground: 'images/ground.png',
+        heart: 'images/heart.png', // パーティクル用のハート画像
+        background1: 'images/background_1.png',
+        background2: 'images/background_2.png',
+        background3: 'images/background_3.png',
+        background4: 'images/background_4.png',
+    };
+    const ASSETS = {};
+    let assetsLoadedCount = 0;
+    let assetsToLoad = Object.keys(ASSET_PATHS).length;
+
+    function loadAssets() {
+        return new Promise((resolve, reject) => {
+            if (assetsToLoad === 0) {
+                resolve();
+                return;
+            }
+            for (const key in ASSET_PATHS) {
+                const img = new Image();
+                img.src = ASSET_PATHS[key];
+                img.onload = () => {
+                    ASSETS[key] = img;
+                    assetsLoadedCount++;
+                    if (assetsLoadedCount === assetsToLoad) {
+                        resolve();
+                    }
+                };
+                img.onerror = () => {
+                    console.error(`Failed to load image: ${ASSET_PATHS[key]}`);
+                    assetsLoadedCount++; // Still increment to avoid hanging if some assets fail
+                    if (assetsLoadedCount === assetsToLoad) {
+                        resolve();
+                    }
+                };
+            }
+        });
+    }
+
+    // --- プレイヤーオブジェクト ---
+    const playerProto = {
+        x: 50, y: 0, width: PLAYER_WIDTH, height: PLAYER_HEIGHT,
+        velocityY: 0, jumpsLeft: 2, jumpForce: BASE_JUMP_FORCE,
+        draw() {
+            ctx.globalAlpha = invincibilityTimer > 0 ? 0.6 : 1.0;
+            if (ASSETS.player) {
+                ctx.drawImage(ASSETS.player, this.x, this.y, this.width, this.height);
+            } else {
+                ctx.fillStyle = 'blue';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+            ctx.globalAlpha = 1.0;
+        },
+        update() {
+            this.velocityY += GRAVITY;
+            this.y += this.velocityY;
+            if (this.y > GROUND_HEIGHT - this.height) {
+                this.y = GROUND_HEIGHT - this.height;
+                this.velocityY = 0;
+                if (this.jumpsLeft < 2) { this.jumpsLeft = 2; }
+            }
+        },
+        jump() {
+            if (this.jumpsLeft > 0) {
+                this.velocityY = this.jumpForce;
+                this.jumpsLeft--;
+                // ジャンプ力アップ中にエフェクトを出す
+                if (jumpUpTimer > 0) {
+                    createJumpParticles(this.x + this.width / 2, this.y + this.height);
+                }
+            }
+        }
+    };
+    
+    // --- ユーティリティ関数 ---
+    function switchScreen(screenName) {
+        Object.values(screens).forEach(s => s.classList.remove('active'));
+        screens[screenName].classList.add('active');
+        gameState = screenName;
+    }
+    function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+    function isColliding(rect1, rect2) { return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y; }
+
+    function resizeCanvas() {
+        const gameContainer = document.getElementById('game-container');
+        const containerWidth = gameContainer.clientWidth - 32; // Adjust for padding
+
+        // 内部的なキャンバスの解像度を設定
+        canvas.width = TARGET_GAME_WIDTH;
+        canvas.height = TARGET_GAME_HEIGHT;
+
+        // 表示サイズをコンテナに合わせて調整
+        const aspectRatio = TARGET_GAME_WIDTH / TARGET_GAME_HEIGHT;
+        let displayWidth = containerWidth;
+        let displayHeight = containerWidth / aspectRatio;
+
+        const maxAllowedHeight = window.innerHeight * 0.8; // 画面の80%を上限とする
+        if (displayHeight > maxAllowedHeight) {
+            displayHeight = maxAllowedHeight;
+            displayWidth = displayHeight * aspectRatio;
+        }
+
+        canvas.style.width = `${displayWidth}px`;
+        canvas.style.height = `${displayHeight}px`;
+
+        GROUND_HEIGHT = canvas.height - 50;
+
+        // Adjust player position if game is active
+        if (player) {
+            player.y = GROUND_HEIGHT - player.height;
+        }
+    }
+
+        // --- ゲームロジック ---
+    function initGame() {
+        player = Object.create(playerProto);
+        player.y = GROUND_HEIGHT - PLAYER_HEIGHT;
+        player.velocityY = 0;
+        player.jumpsLeft = 2;
+        player.jumpForce = BASE_JUMP_FORCE;
+        
+        obstacles = []; items = []; score = 0; baseSpeed = 5; gameSpeed = baseSpeed; timer = 60;
+        visualEffects = []; // エフェクト配列を初期化
+        frameCount = 0; // フレームカウントを初期化
+        playerHistory = []; // プレイヤーの移動履歴を初期化
+        spawnCooldown = 120;
+        itemSpawnCooldown = getRandomInt(300, 500);
+
+        invincibilityTimer = 0; speedUpTimer = 0; jumpUpTimer = 0;
+        backgroundScrollX = 0; // 背景スクロール位置をリセット
+        groundX = 0; // 地面スクロール位置をリセット
+        effectDisplay.textContent = '';
+        effectDisplay.classList.add('opacity-0');
+
+        scoreDisplay.textContent = 0;
+        timerDisplay.textContent = timer;
+    }
+
+    function startGame() {
+        resizeCanvas(); // Ensure canvas dimensions and GROUND_HEIGHT are set
+        initGame();
+        switchScreen('game');
+        gameInterval = setInterval(() => {
+            timer--;
+            timerDisplay.textContent = timer;
+            if (timer <= 0) { endGame(); }
+        }, 1000);
+        gameLoop();
+    }
+
+    function endGame() {
+        clearInterval(gameInterval);
+        cancelAnimationFrame(animationFrameId);
+        finalScoreDisplay.textContent = score;
+        switchScreen('gameOver');
+    }
+
+    function gameLoop() {
+        if (gameState !== 'game') return;
+
+        frameCount++; // フレームカウントをインクリメント
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // --- 連結した背景のスクロール ---
+        const bgImages = [ASSETS.background1, ASSETS.background2, ASSETS.background3, ASSETS.background4];
+        const bgScrollSpeed = 0.5; // 背景のスクロール速度
+        const widthMultiplier = 1.5; // 背景の横幅倍率
+
+        backgroundScrollX -= gameSpeed * bgScrollSpeed;
+
+        let currentX = backgroundScrollX;
+        let totalWidth = 0;
+
+        // 全背景の合計幅を計算（リサイズ後）
+        for (const img of bgImages) {
+            if (img) {
+                const scale = canvas.height / img.height;
+                totalWidth += (img.width * scale) * widthMultiplier;
+            }
+        }
+
+        // 背景が一周したらリセット
+        if (backgroundScrollX <= -totalWidth) {
+            backgroundScrollX += totalWidth;
+        }
+
+        // 画面に見える範囲の背景を描画
+        for (const img of bgImages) {
+            if (img) {
+                const scale = canvas.height / img.height;
+                const scaledWidth = (img.width * scale) * widthMultiplier;
+
+                // 画面内に見える可能性のある画像を描画
+                if (currentX < canvas.width && currentX + scaledWidth > 0) {
+                    ctx.drawImage(img, currentX, 0, scaledWidth, canvas.height);
+                }
+                currentX += scaledWidth;
+            }
+        }
+        // ループ描画のために、連結した背景セットをもう一度描画
+        let loopX = backgroundScrollX + totalWidth;
+        for (const img of bgImages) {
+             if (img) {
+                const scale = canvas.height / img.height;
+                const scaledWidth = (img.width * scale) * widthMultiplier;
+                if (loopX < canvas.width && loopX + scaledWidth > 0) {
+                    ctx.drawImage(img, loopX, 0, scaledWidth, canvas.height);
+                }
+                loopX += scaledWidth;
+            }
+        }
+
+
+        // 地面のスクロールと描画
+        if (ASSETS.ground) {
+            const img = ASSETS.ground;
+            const groundDisplayHeight = canvas.height - GROUND_HEIGHT;
+            const scale = groundDisplayHeight / img.height;
+            const scaledWidth = img.width * scale;
+
+            groundX -= gameSpeed;
+            if (groundX <= -scaledWidth) {
+                groundX += scaledWidth;
+            }
+            
+            // 地面を繰り返し描画して隙間をなくす
+            for (let i = 0; (groundX + i * scaledWidth) < canvas.width; i++) {
+                 ctx.drawImage(img, groundX + i * scaledWidth, GROUND_HEIGHT, scaledWidth, groundDisplayHeight);
+            }
+        } else {
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, GROUND_HEIGHT, canvas.width, canvas.height - GROUND_HEIGHT);
+        }
+
+        manageObstacleSpawning();
+        manageItemSpawning();
+        updateItemEffects();
+
+        player.update();
+        player.draw();
+
+        // プレイヤーの履歴を記録
+        playerHistory.push({x: player.x, y: player.y});
+        if (playerHistory.length > 10) { // 過去10フレーム分の位置を保持
+            playerHistory.shift();
+        }
+
+        // エフェクトの更新と描画
+        updateAndDrawEffects();
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            const o = obstacles[i];
+            o.x -= gameSpeed;
+            o.update();
+            if (o.x + o.width < 0 || o.y > canvas.height) { obstacles.splice(i, 1); continue; }
+            o.draw();
+            if (invincibilityTimer <= 0 && isColliding(player, o)) { endGame(); return; }
+        }
+
+        for (let i = items.length - 1; i >= 0; i--) {
+            const item = items[i];
+            item.x -= gameSpeed;
+            if (item.x + item.width < 0) { items.splice(i, 1); continue; }
+            item.draw();
+            if (isColliding(player, item)) {
+                activateItem(item.type, item.x, item.y);
+                items.splice(i, 1);
+            }
+        }
+        
+        score++;
+        scoreDisplay.textContent = score;
+        baseSpeed += 0.003;
+        if (speedUpTimer <= 0) gameSpeed = baseSpeed;
+
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+    
+    // --- 障害物生成 ---
+    function createObstacle(type, xOffset = 0) {
+        const obstacle = {
+            x: TARGET_GAME_WIDTH + xOffset, update: function(){},
+            draw() {
+                let img = null;
+                if (type === 'low') img = ASSETS.obstacleLow;
+                else img = ASSETS.obstacleHigh;
+
+                if (img) {
+                    ctx.drawImage(img, this.x, this.y, this.width, this.height);
+                } else {
+                    ctx.fillStyle = 'red';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+            }
+        };
+        if (type === 'low') { obstacle.width = 45; obstacle.height = 60; obstacle.y = GROUND_HEIGHT - obstacle.height; } 
+        else { obstacle.width = 90; obstacle.height = 120; obstacle.y = GROUND_HEIGHT - obstacle.height; }
+        obstacles.push(obstacle);
+    }
+
+    function createFallingObstacle() {
+        const obstacle = {
+            x: getRandomInt(TARGET_GAME_WIDTH, TARGET_GAME_WIDTH * 1.5), y: -30, width: 37.5, height: 37.5, vy: 4,
+            update: function() { this.y += this.vy; },
+            draw: function() {
+                if (ASSETS.fallingObstacle) {
+                    ctx.drawImage(ASSETS.fallingObstacle, this.x, this.y, this.width, this.height);
+                } else {
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+            }
+        };
+        obstacles.push(obstacle);
+    }
+
+    function createFastObstacle() {
+        const obstacle = {
+            x: TARGET_GAME_WIDTH, y: GROUND_HEIGHT - 45, width: 75, height: 45, vx: -4,
+            update: function() { this.x += this.vx; },
+            draw: function() {
+                if (ASSETS.fastObstacle) {
+                    ctx.drawImage(ASSETS.fastObstacle, this.x, this.y, this.width, this.height);
+                } else {
+                    ctx.fillStyle = '#4A5568';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+            }
+        };
+        obstacles.push(obstacle);
+    }
+
+    function spawnPattern(pattern) {
+        pattern.forEach(p => {
+            const xOffset = p.delay * gameSpeed;
+            createObstacle(p.type, xOffset);
+        });
+    }
+
+    function manageObstacleSpawning() {
+        spawnCooldown--;
+        if (spawnCooldown > 0) return;
+        if (timer > 40) {
+            createObstacle('low');
+            spawnCooldown = getRandomInt(90, 120);
+        } else if (timer > 25) {
+            const r = Math.random();
+            if (timer <= 35 && r < 0.25) { createFastObstacle(); }
+            else if (r < 0.6) { createObstacle('low'); }
+            else if (r < 0.85) { createObstacle('high'); }
+            else { spawnPattern([{ type: 'low', delay: 0 }, { type: 'low', delay: 40 }]); }
+            spawnCooldown = getRandomInt(65, 95);
+        } else {
+            const r = Math.random();
+            if (r < 0.25) { createFallingObstacle(); }
+            else if (r < 0.5) { createFastObstacle(); }
+            else if (r < 0.75) { spawnPattern([{ type: 'low', delay: 0 }, { type: 'high', delay: 50 }]); }
+            else { spawnPattern([{ type: 'high', delay: 0 }, { type: 'low', delay: 60 }]); }
+            spawnCooldown = getRandomInt(50, 80);
+        }
+    }
+
+    // --- アイテム関連 ---
+    function createItem(type) {
+        const item = {
+            x: TARGET_GAME_WIDTH, y: getRandomInt(GROUND_HEIGHT - 150, GROUND_HEIGHT - 80),
+            width: 45, height: 45, type: type,
+            draw() {
+                const centerX = this.x + this.width / 2;
+                const centerY = this.y + this.height / 2;
+
+                // Richer Glowing effect
+                ctx.save();
+                const baseGlowStrength = (Math.sin(frameCount * 0.05) + 1) / 2; // 0 to 1
+                const randomFlicker = (Math.random() * 0.2 - 0.1); // -0.1 to 0.1
+                const glowStrength = Math.max(0, Math.min(1, baseGlowStrength + randomFlicker));
+
+                let glowColorBase = '';
+                let baseRadius = this.width / 2;
+                let maxRadiusOffset = 15; // Max extra radius for glow
+
+                switch(this.type) {
+                    case 'scoreUp':
+                        glowColorBase = '255, 215, 0'; // Gold
+                        maxRadiusOffset = 12;
+                        break;
+                    case 'invincible':
+                        glowColorBase = '0, 191, 255'; // Deepskyblue
+                        maxRadiusOffset = 18;
+                        break;
+                    case 'speedUp':
+                        glowColorBase = '50, 205, 50'; // Limegreen
+                        maxRadiusOffset = 15;
+                        break;
+                    case 'jumpUp':
+                        glowColorBase = '255, 105, 180'; // Hotpink
+                        maxRadiusOffset = 15;
+                        break;
+                }
+
+                // Draw multiple concentric circles for a halo effect
+                for (let i = 0; i < 3; i++) {
+                    const currentRadius = baseRadius + (glowStrength * maxRadiusOffset * (1 - i * 0.2));
+                    const alpha = (0.4 - i * 0.1) * glowStrength; // Decreasing alpha for outer circles
+                    ctx.fillStyle = `rgba(${glowColorBase}, ${alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, currentRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                // Draw the item image/shape
+                let img = null;
+                switch(this.type) {
+                    case 'scoreUp': img = ASSETS.itemScoreUp; break;
+                    case 'invincible': img = ASSETS.itemInvincible; break;
+                    case 'speedUp': img = ASSETS.itemSpeedUp; break;
+                    case 'jumpUp': img = ASSETS.itemJumpUp; break;
+                }
+
+                if (img) {
+                    ctx.drawImage(img, this.x, this.y, this.width, this.height);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, this.width / 2, 0, Math.PI * 2);
+                    switch(this.type) {
+                        case 'scoreUp': ctx.fillStyle = 'gold'; break;
+                        case 'invincible': ctx.fillStyle = 'deepskyblue'; break;
+                        case 'speedUp': ctx.fillStyle = 'limegreen'; break;
+                        case 'jumpUp': ctx.fillStyle = 'hotpink'; break;
+                    }
+                    ctx.fill();
+                }
+
+                // Draw floating hearts for scoreUp item
+                if (this.type === 'scoreUp' && this.floatingHearts) {
+                    this.floatingHearts.forEach(heart => {
+                        const heartX = centerX + Math.cos(heart.angle) * heart.radius;
+                        const heartY = centerY + Math.sin(heart.angle) * heart.radius;
+
+                        ctx.drawImage(ASSETS.heart, heartX - heart.size / 2, heartY - heart.size / 2, heart.size, heart.size);
+
+                        heart.angle += heart.speed; // Update angle for next frame
+                    });
+                }
+            } // End of draw method
+        }; // End of item object definition
+
+        // Initialize floating hearts for scoreUp item (after item object is defined)
+        if (type === 'scoreUp') {
+            item.floatingHearts = [];
+            const numHearts = 3; // Number of hearts to float around
+            for (let i = 0; i < numHearts; i++) {
+                item.floatingHearts.push({
+                    angle: Math.random() * Math.PI * 2, // Initial random angle
+                    radius: getRandomInt(30, 40), // Distance from item center
+                    size: getRandomInt(15, 25), // Size of the heart image
+                    speed: (Math.random() * 0.02 + 0.01) * (Math.random() < 0.5 ? 1 : -1) // Orbit speed and direction
+                });
+            }
+        }
+        items.push(item);
+    }
+    
+    function manageItemSpawning() {
+        itemSpawnCooldown--;
+        if (itemSpawnCooldown <= 0) {
+            const itemTypes = [ 'scoreUp', 'scoreUp', 'scoreUp', 'invincible', 'speedUp', 'jumpUp' ];
+            const type = itemTypes[getRandomInt(0, itemTypes.length - 1)];
+            createItem(type);
+            itemSpawnCooldown = getRandomInt(400, 700);
+        }
+    }
+    
+    function activateItem(type, x, y) {
+        switch(type) {
+            case 'scoreUp':
+                score += 500;
+                scoreDisplay.textContent = score;
+                showEffectMessage('スコア +500点！', 2);
+                createScoreEffect(x, y);
+                break;
+            case 'invincible':
+                invincibilityTimer = 300;
+                showEffectMessage('無敵！', 2);
+                createInvincibleEffect(player.x + player.width / 2, player.y + player.height / 2);
+                break;
+            case 'speedUp':
+                if (speedUpTimer <= 0) gameSpeed = baseSpeed * 1.5;
+                speedUpTimer = 420;
+                showEffectMessage('スピードアップ！', 2);
+                createSpeedUpEffect(player.x + player.width / 2, player.y + player.height / 2);
+                break;
+            case 'jumpUp':
+                player.jumpForce = BASE_JUMP_FORCE * 1.3;
+                jumpUpTimer = 600;
+                showEffectMessage('ジャンプ力アップ！', 2);
+                createJumpUpItemEffect(player.x + player.width / 2, player.y + player.height);
+                break;
+        }
+    }
+
+    function updateItemEffects() {
+        let effectMessage = '';
+        if (invincibilityTimer > 0) {
+            invincibilityTimer--;
+            effectMessage = `無敵！ 残り ${Math.ceil(invincibilityTimer / 60)} 秒`;
+            if (invincibilityTimer <= 0) showEffectMessage('無敵終了', 2);
+        }
+        if (speedUpTimer > 0) {
+            speedUpTimer--;
+            effectMessage = `スピードアップ！ 残り ${Math.ceil(speedUpTimer / 60)} 秒`;
+            if (speedUpTimer <= 0) { gameSpeed = baseSpeed; showEffectMessage('スピードアップ終了', 2); }
+        }
+        if (jumpUpTimer > 0) {
+            jumpUpTimer--;
+            effectMessage = `ジャンプ力アップ！ 残り ${Math.ceil(jumpUpTimer / 60)} 秒`;
+            if (jumpUpTimer <= 0) { player.jumpForce = BASE_JUMP_FORCE; showEffectMessage('ジャンプ力アップ終了', 2); }
+        }
+        if (effectMessage) {
+            effectDisplay.textContent = effectMessage;
+            effectDisplay.classList.remove('opacity-0');
+        } else if (!effectDisplay.dataset.temp) {
+            effectDisplay.classList.add('opacity-0');
+        }
+    }
+
+    function showEffectMessage(message, durationInSeconds) {
+        effectDisplay.textContent = message;
+        effectDisplay.classList.remove('opacity-0');
+        effectDisplay.dataset.temp = 'true';
+        setTimeout(() => {
+            if (invincibilityTimer <= 0 && speedUpTimer <= 0 && jumpUpTimer <= 0) {
+                 effectDisplay.classList.add('opacity-0');
+            }
+            delete effectDisplay.dataset.temp;
+        }, durationInSeconds * 1000);
+    }
+
+    // --- エフェクト関連の関数 ---
+    function createParticle(x, y, options = {}) {
+        const { color = 'gold', size = 15, life = 60, vx = (Math.random() - 0.5) * 4, vy = (Math.random() - 0.5) * 4, gravity = 0.1, image = null } = options;
+        visualEffects.push({
+            type: 'particle', x, y, vx, vy, life, maxLife: life, size, color, gravity, image
+        });
+    }
+
+    function createTextEffect(x, y, text, options = {}) {
+        const { color = 'white', size = 20, life = 60, vy = -1 } = options;
+        visualEffects.push({
+            type: 'text', x, y, text, life, maxLife: life, size, color, vy
+        });
+    }
+
+    function createScoreEffect(x, y) {
+        createTextEffect(x, y, '+500', { color: 'gold', size: 24, life: 80, vy: -1.5 });
+        for (let i = 0; i < 15; i++) {
+            createParticle(x, y, { image: ASSETS.heart, size: getRandomInt(15, 25), life: getRandomInt(40, 70) });
+        }
+    }
+
+    function createJumpParticles(x, y) {
+        for (let i = 0; i < 10; i++) {
+            createParticle(x, y, {
+                color: 'hotpink',
+                size: getRandomInt(5, 15),
+                life: getRandomInt(30, 50),
+                vx: (Math.random() - 0.5) * 6,
+                vy: -Math.random() * 5 - 2,
+                gravity: 0.2
+            });
+        }
+    }
+
+    // 無敵エフェクト
+    function createInvincibleEffect(x, y) {
+        visualEffects.push({
+            type: 'invincibleAura',
+            x: x, y: y,
+            radius: 0,
+            maxRadius: 50,
+            life: 60,
+            maxLife: 60,
+            color: 'rgba(0, 191, 255, 0.8)', // deepskyblue
+            image: ASSETS.itemInvincibleEffect // 無敵エフェクト用の画像
+        });
+    }
+
+    // スピードアップエフェクト
+    function createSpeedUpEffect(x, y) {
+        for (let i = 0; i < 20; i++) {
+            createParticle(x, y, {
+                color: 'limegreen',
+                size: getRandomInt(5, 10),
+                life: getRandomInt(20, 40),
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                gravity: 0
+            });
+        }
+    }
+
+    // ジャンプ力アップエフェクト (アイテム取得時)
+    function createJumpUpItemEffect(x, y) {
+        for (let i = 0; i < 15; i++) {
+            createParticle(x, y, {
+                color: 'hotpink',
+                size: getRandomInt(8, 18),
+                life: getRandomInt(40, 60),
+                vx: (Math.random() - 0.5) * 8,
+                vy: -Math.random() * 7 - 3,
+                gravity: 0.1
+            });
+        }
+    }
+    
+    // --- エフェクトの更新と描画 ---
+    function updateAndDrawEffects() {
+        for (let i = visualEffects.length - 1; i >= 0; i--) {
+            const effect = visualEffects[i];
+            effect.life--;
+
+            if (effect.type === 'particle') {
+                effect.x += effect.vx;
+                effect.y += effect.vy;
+                effect.vy += effect.gravity; // 重力の影響
+
+                const alpha = effect.life / effect.maxLife;
+                ctx.globalAlpha = alpha;
+                if (effect.image) {
+                    ctx.drawImage(effect.image, effect.x, effect.y, effect.size, effect.size);
+                } else {
+                    ctx.fillStyle = effect.color;
+                    ctx.beginPath();
+                    ctx.arc(effect.x, effect.y, effect.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else if (effect.type === 'text') {
+                effect.y += effect.vy;
+                const alpha = effect.life / effect.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = effect.color;
+                ctx.font = `${effect.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText(effect.text, effect.x, effect.y);
+            } else if (effect.type === 'invincibleAura') {
+                effect.radius = effect.maxRadius * (1 - effect.life / effect.maxLife);
+                const alpha = effect.life / effect.maxLife;
+                ctx.globalAlpha = alpha;
+                if (effect.image) {
+                    const imgSize = effect.radius * 2;
+                    ctx.drawImage(effect.image, effect.x - imgSize / 2, effect.y - imgSize / 2, imgSize, imgSize);
+                } else {
+                    ctx.strokeStyle = effect.color;
+                    ctx.lineWidth = 5;
+                    ctx.beginPath();
+                    ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+            ctx.globalAlpha = 1.0; // リセット
+
+            if (effect.life <= 0) {
+                visualEffects.splice(i, 1);
+            }
+        }
+    }
+    
+    // --- ランキング処理 ---
+    const API_BASE_URL = 'http://localhost:3000'; // バックエンドAPIのURL
+
+    async function getRankings() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/rankings`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const rankings = await response.json();
+            return rankings;
+        } catch (error) {
+            console.error('ランキングの取得中にエラーが発生しました:', error);
+            return []; // エラー時は空の配列を返す
+        }
+    }
+    async function saveRanking(playerName, playerScore) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/rankings`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: playerName, score: playerScore }),
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            console.log('ランキングがサーバーに保存されました。');
+        } catch (error) {
+            console.error('ランキングの保存中にエラーが発生しました:', error);
+            // エラーハンドリング（例: ユーザーに通知）
+        }
+    }
+    async function displayRankings() {
+        const rankings = await getRankings();
+        rankingList.innerHTML = '';
+        if (rankings.length === 0) {
+            rankingList.innerHTML = '<li>まだ誰もプレイしていません。</li>';
+        } else {
+            rankings.forEach((r, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between p-2 rounded ' + (index % 2 === 0 ? 'bg-gray-100' : '');
+                li.innerHTML = `<span>${index + 1}. ${r.name}</span> <span class="font-bold">${r.score}</span>`;
+                rankingList.appendChild(li);
+            });
+        }
+    }
+
+    // --- イベントリスナー設定 ---
+    function handleInput(e) {
+        if (gameState === 'game') {
+            e.preventDefault();
+            player.jump();
+        }
+    }
+    screens.title.addEventListener('click', startGame);
+        rankingButton.addEventListener('click', async (e) => { e.stopPropagation(); await displayRankings(); switchScreen('ranking'); });
+    backToTitleButton.addEventListener('click', () => switchScreen('title'));
+    backToTitleFromGameOver.addEventListener('click', () => switchScreen('title'));
+        rankingForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const playerName = playerNameInput.value.trim();
+        if (playerName) {
+            await saveRanking(playerName, score);
+            playerNameInput.value = '';
+            await displayRankings();
+            switchScreen('ranking');
+        }
+    });
+    window.addEventListener('keydown', (e) => { if (e.code === 'Space') handleInput(e); });
+    canvas.addEventListener('mousedown', handleInput);
+    canvas.addEventListener('touchstart', handleInput, { passive: false });
+    jumpButton.addEventListener('click', handleInput);
+
+    // --- 初期化 ---
+    lucide.createIcons();
+    loadAssets().then(() => {
+        resizeCanvas(); // Initial canvas resize
+        switchScreen('title');
+    }).catch(error => {
+        console.error('アセットの読み込み中にエラーが発生しました:', error);
+        // エラーが発生した場合でもタイトル画面を表示するなど、適切なフォールバック処理を追加
+        switchScreen('title');
+    });
+    window.addEventListener('resize', resizeCanvas);
+});
+</script>
+</body>
+</html>
