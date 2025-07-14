@@ -17,8 +17,8 @@
 <body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans">
 
     <div id="game-container" class="w-full max-w-2xl mx-auto p-4 text-center">
-        <div id="title-screen" class="screen active flex-col items-center justify-center space-y-8">
-            <img src="images/title.png" alt="ゲームタイトル画像" class="w-full max-w-lg mx-auto mb-8 rounded-lg shadow-lg">
+        <div id="title-screen" class="screen active flex-col items-center justify-center space-y-8 relative">
+            <img id="title-image" src="images/title.png" alt="ゲームタイトル画像" class="w-full max-w-lg mx-auto mb-8 rounded-lg shadow-lg cursor-pointer">
             <div class="space-y-4 mb-8">
                 <button id="ranking-button" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg text-xl flex items-center justify-center space-x-2">
                     <i data-lucide="trophy"></i>
@@ -44,6 +44,10 @@
                     <li><strong>ゲームオーバー:</strong> 障害物にぶつかるか、タイマーが0になるとゲームオーバー。</li>
                 </ul>
             </div>
+            <button id="admin-button" class="mt-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg text-xl flex items-center justify-center space-x-2">
+                <i data-lucide="settings"></i>
+                <span>管理者メニュー</span>
+            </button>
         </div>
 
         <div id="game-screen" class="screen flex-col items-center relative">
@@ -81,15 +85,31 @@
             <ol id="ranking-list" class="list-decimal list-inside bg-white p-6 rounded-lg shadow-md w-full max-w-md text-left space-y-2"></ol>
             <button id="back-to-title-button" class="mt-8 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">タイトルへ戻る</button>
         </div>
+
+        <div id="admin-screen" class="screen flex-col items-center justify-center space-y-6">
+            <h2 class="text-4xl font-bold mb-6">管理者メニュー</h2>
+            <div class="w-full max-w-sm space-y-4">
+                <input type="password" id="admin-password" placeholder="管理者パスワード" class="w-full p-3 border rounded-lg text-center">
+                <button id="reset-ranking-button" class="w-full bg-red-500 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg text-xl">ランキングをリセット</button>
+                <p id="admin-message" class="text-center text-sm text-gray-600"></p>
+            </div>
+            <button id="back-to-title-from-admin" class="mt-4 text-gray-600 hover:underline">タイトルへ戻る</button>
+        </div>
     </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM要素の取得 ---
-    const screens = { title: document.getElementById('title-screen'), game: document.getElementById('game-screen'), gameOver: document.getElementById('game-over-screen'), ranking: document.getElementById('ranking-screen'), };
+    const screens = { title: document.getElementById('title-screen'), game: document.getElementById('game-screen'), gameOver: document.getElementById('game-over-screen'), ranking: document.getElementById('ranking-screen'), admin: document.getElementById('admin-screen'), };
+    const titleImage = document.getElementById('title-image');
     const rankingButton = document.getElementById('ranking-button');
+    const adminButton = document.getElementById('admin-button');
     const backToTitleButton = document.getElementById('back-to-title-button');
     const backToTitleFromGameOver = document.getElementById('back-to-title-from-gameover');
+    const backToTitleFromAdmin = document.getElementById('back-to-title-from-admin');
+    const resetRankingButton = document.getElementById('reset-ranking-button');
+    const adminPasswordInput = document.getElementById('admin-password');
+    const adminMessageDisplay = document.getElementById('admin-message');
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
     const scoreDisplay = document.getElementById('score-display');
@@ -856,11 +876,13 @@ document.addEventListener('DOMContentLoaded', () => {
             player.jump();
         }
     }
-    screens.title.addEventListener('click', startGame);
-        rankingButton.addEventListener('click', async (e) => { e.stopPropagation(); await displayRankings(); switchScreen('ranking'); });
+    titleImage.addEventListener('click', startGame);
+    rankingButton.addEventListener('click', async (e) => { e.stopPropagation(); await displayRankings(); switchScreen('ranking'); });
+    adminButton.addEventListener('click', (e) => { e.stopPropagation(); switchScreen('admin'); });
     backToTitleButton.addEventListener('click', () => switchScreen('title'));
     backToTitleFromGameOver.addEventListener('click', () => switchScreen('title'));
-        rankingForm.addEventListener('submit', async (e) => {
+    backToTitleFromAdmin.addEventListener('click', () => { adminMessageDisplay.textContent = ''; adminPasswordInput.value = ''; switchScreen('title'); });
+    rankingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const playerName = playerNameInput.value.trim();
         if (playerName) {
@@ -870,6 +892,32 @@ document.addEventListener('DOMContentLoaded', () => {
             switchScreen('ranking');
         }
     });
+
+    resetRankingButton.addEventListener('click', async () => {
+        const password = adminPasswordInput.value;
+        adminMessageDisplay.textContent = 'リセット中...';
+        try {
+            const response = await fetch(`${API_BASE_URL}/rankings/reset`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ password: password }),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                adminMessageDisplay.textContent = 'ランキングがリセットされました！';
+                adminPasswordInput.value = '';
+            } else {
+                adminMessageDisplay.textContent = `エラー: ${data.error || 'リセットに失敗しました。'}`;
+            }
+        } catch (error) {
+            console.error('ランキングリセット中にエラーが発生しました:', error);
+            adminMessageDisplay.textContent = 'エラー: サーバーに接続できませんでした。';
+        }
+    });
+
     window.addEventListener('keydown', (e) => { if (e.code === 'Space') handleInput(e); });
     canvas.addEventListener('mousedown', handleInput);
     canvas.addEventListener('touchstart', handleInput, { passive: false });
