@@ -52,6 +52,26 @@ app.post('/rankings', (req, res) => {
     });
 });
 
+// 管理者パスワード (簡易的な例。本番環境では環境変数などを使用すべき)
+const ADMIN_RESET_PASSWORD = '2104';
+
+// ランキングリセットAPI (管理者用)
+app.post('/rankings/reset', (req, res) => {
+    const { password } = req.body;
+
+    if (password !== ADMIN_RESET_PASSWORD) {
+        return res.status(403).json({ error: '不正なパスワードです。' });
+    }
+
+    db.run('DELETE FROM rankings', function (err) {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.status(200).json({ message: 'ランキングがリセットされました。' });
+    });
+});
+
 // サーバー起動
 app.listen(port, () => {
     console.log(`ランキングAPIサーバーが http://localhost:${port} で起動しました。`);
