@@ -51,7 +51,7 @@ app.get('/rankings', async (req, res) => {
   }
 });
 
-// ランキング保存API
+// ランキング保存API (存在確認とスコア更新ロジックを追加)
 app.post('/rankings', async (req, res) => {
   const { name, score } = req.body;
   if (!name || typeof score !== 'number') {
@@ -59,11 +59,31 @@ app.post('/rankings', async (req, res) => {
   }
 
   try {
-    const result = await pool.query(
-      'INSERT INTO rankings (name, score) VALUES ($1, $2) RETURNING *',
-      [name, score]
-    );
-    res.status(201).json(result.rows[0]);
+    // 1. 同じ名前のプレイヤーが既に存在するか確認
+    const existingPlayer = await pool.query('SELECT * FROM rankings WHERE name = $1', [name]);
+
+    if (existingPlayer.rows.length > 0) {
+      // 2. プレイヤーが存在する場合
+      const oldScore = existingPlayer.rows[0].score;
+      if (score > oldScore) {
+        // 新しいスコアの方が高い場合のみ更新
+        const result = await pool.query(
+          'UPDATE rankings SET score = $1, timestamp = CURRENT_TIMESTAMP WHERE name = $2 RETURNING *',
+          [score, name]
+        );
+        res.status(200).json(result.rows[0]); // 200 OK
+      } else {
+        // スコアが更新されなかった場合
+        res.status(200).json({ message: 'Score not updated, as the new score is not higher.' });
+      }
+    } else {
+      // 3. プレイヤーが存在しない場合、新しく登録
+      const result = await pool.query(
+        'INSERT INTO rankings (name, score) VALUES ($1, $2) RETURNING *',
+        [name, score]
+      );
+      res.status(201).json(result.rows[0]); // 201 Created
+    }
   } catch (err) {
     console.error('Error saving ranking:', err);
     res.status(500).json({ error: 'Failed to save ranking' });
