@@ -73,6 +73,6 @@ app.post('/rankings/reset', (req, res) => {
 });
 
 // サーバー起動
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
     console.log(`ランキングAPIサーバーが http://localhost:${port} で起動しました。`);
 });
