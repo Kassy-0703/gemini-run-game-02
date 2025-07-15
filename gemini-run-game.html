@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
             frameCount: 0, backgroundScrollX: 0, groundScrollX: 0, spawnCooldown: 120,
             itemSpawnCooldown: getRandomInt(300, 500), invincibilityTimer: 0, speedUpTimer: 0, jumpUpTimer: 0,
             isGameOverSequenceActive: false, gameOverEffectTimer: 0,
-            currentScreen: 'title', groundY: groundY,
+            currentScreen: 'title', groundY: groundY, gameHasEnded: false,
         };
     }
 
@@ -261,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function gameLoop() {
+        if (state.gameHasEnded) return;
         update(); draw();
         if (state.currentScreen === 'game' || state.isGameOverSequenceActive) {
             animationFrameId = requestAnimationFrame(gameLoop);
@@ -282,6 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function endGame(switchToGameOverScreen = true) {
+        state.gameHasEnded = true;
         clearInterval(gameInterval);
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
