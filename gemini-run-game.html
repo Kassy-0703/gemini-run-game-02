@@ -156,6 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. ゲーム状態変数 (Game State Variables)
     // =================================================================
     let state = {}; let assets = {}; let audioAssets = {}; let loadedBackgroundImages = []; let currentBgm = null, userInteracted = false;
+    let debugInfo = {}; // デバッグ情報用
 
     // =================================================================
     // 4. 初期化と���ットアップ (Initialization and Setup)
@@ -163,32 +164,45 @@ document.addEventListener('DOMContentLoaded', () => {
     function main() {
         lucide.createIcons();
         setupEventListeners();
-        Promise.all([loadAssets(), loadAudio()]).then(() => {
+        Promise.all([loadAssets(), loadAudio()]).then(([assetLoadResult]) => {
+            debugInfo = assetLoadResult; // 読み込み結果を保存
             loadedBackgroundImages = Object.keys(ASSET_PATHS).filter(k => k.startsWith('background') && assets[k]).map(k => assets[k]);
             resizeCanvas();
             switchScreen('title');
-        }).catch(error => { console.error("Asset loading failed:", error); resizeCanvas(); switchScreen('title'); });
+        }).catch(error => { 
+            console.error("Asset loading failed:", error);
+            debugInfo = { error: error.message };
+            resizeCanvas(); 
+            switchScreen('title'); 
+        });
     }
 
     function loadAssets() {
         const assetEntries = Object.entries(ASSET_PATHS);
-        // reduceを使ってPromiseチェーンを構築し、画像を1枚ずつ順番に読み込む
-        return assetEntries.reduce((promiseChain, [key, src]) => {
+        const loaded = [];
+        const failed = [];
+
+        const loadPromise = assetEntries.reduce((promiseChain, [key, src]) => {
             return promiseChain.then(() => new Promise(resolve => {
                 const img = new Image();
-                img.src = src;
+                // キャッシュを無効化して強制的に再読み込みさせる
+                img.src = src + '?t=' + new Date().getTime();
                 img.onload = () => {
                     assets[key] = img;
+                    loaded.push(src.split('/').pop());
                     resolve();
                 };
                 img.onerror = () => {
                     assets[key] = null;
+                    failed.push(src.split('/').pop());
                     console.error(`Failed to load image: ${src}`);
-                    // 1つの画像の読み込みに失敗しても、処理を止めずに次に進む
                     resolve(); 
                 };
             }));
         }, Promise.resolve());
+
+        // 読み込み完了後にデバッグ情報を返す
+        return loadPromise.then(() => ({ loaded, failed }));
     }
     
     function loadAudio() {
@@ -331,6 +345,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // UIの更新
         dom.displays.score.textContent = state.score;
         dom.displays.timer.textContent = state.timer;
+
+        // --- デバッグ情報描画 ---
+        if (debugInfo.failed && debugInfo.failed.length > 0) {
+            ctx.fillStyle = 'red';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('Failed to load:', 10, 20);
+            debugInfo.failed.forEach((file, i) => {
+                ctx.fillText(file, 10, 35 + (i * 15));
+            });
+        }
 
         // 赤いフラッシュ演出
         if (state.isGameOverSequenceActive) {
