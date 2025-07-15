@@ -65,9 +65,11 @@
                 </div>
             </div>
         </div>
-        <div id="game-over-screen" class="screen flex-col items-center justify-center space-y-6">
-            <h2 class="text-5xl font-bold text-red-500">Game Over</h2>
-            <p class="text-2xl">最終スコア: <span id="final-score">0</span></p>
+        <div id="game-over-screen" class="screen flex-col items-center justify-center space-y-8">
+            <div class="text-center bg-gradient-to-br from-yellow-100 to-orange-200 p-8 rounded-2xl shadow-2xl border-4 border-yellow-400 w-full max-w-md">
+                <h3 class="text-3xl font-bold text-yellow-800 mb-4 drop-shadow-md">今回のスコア</h3>
+                <p id="final-score" class="text-7xl font-extrabold text-yellow-900 tracking-tight">0</p>
+            </div>
             <form id="ranking-form" class="w-full max-w-sm space-y-4">
                 <input type="text" id="player-name" placeholder="プレイヤー名を入力" class="w-full p-3 border rounded-lg text-center" required maxlength="10">
                 <button type="submit" class="w-full bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-xl">ランキングに登録</button>
@@ -112,6 +114,14 @@ document.addEventListener('DOMContentLoaded', () => {
         background1: 'images/background_1.png', background2: 'images/background_2.png',
         background3: 'images/background_3.png', background4: 'images/background_4.png',
     };
+    const AUDIO_PATHS = {
+        bgmMenu: 'audio/bgm_menu.mp3',
+        bgmGame: 'audio/bgm_game.mp3',
+        jump: 'audio/jump.wav',
+        itemGet: 'audio/item_get.wav',
+        gameOver: 'audio/game_over.wav',
+        gameStart: 'audio/game_start.wav'
+    };
 
     // =================================================================
     // 2. DOM要素の取得 (DOM Element Retrieval)
@@ -137,15 +147,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // 3. ゲーム状態変数 (Game State Variables)
     // =================================================================
-    let state = {}; let assets = {}; let loadedBackgroundImages = [];
+    let state = {}; let assets = {}; let audioAssets = {}; let loadedBackgroundImages = []; let currentBgm = null, userInteracted = false;
 
     // =================================================================
-    // 4. 初期化とセットアップ (Initialization and Setup)
+    // 4. 初期化と���ットアップ (Initialization and Setup)
     // =================================================================
     function main() {
         lucide.createIcons();
         setupEventListeners();
-        loadAssets().then(() => {
+        Promise.all([loadAssets(), loadAudio()]).then(() => {
             loadedBackgroundImages = Object.keys(ASSET_PATHS).filter(k => k.startsWith('background') && assets[k]).map(k => assets[k]);
             resizeCanvas();
             switchScreen('title');
@@ -158,6 +168,16 @@ document.addEventListener('DOMContentLoaded', () => {
             img.src = src;
             img.onload = () => { assets[key] = img; resolve(); };
             img.onerror = () => { assets[key] = null; console.error(`Failed to load: ${src}`); resolve(); };
+        }));
+        return Promise.all(promises);
+    }
+    
+    function loadAudio() {
+        const promises = Object.entries(AUDIO_PATHS).map(([key, src]) => new Promise(resolve => {
+            const audio = new Audio();
+            audio.src = src;
+            audio.oncanplaythrough = () => { audioAssets[key] = audio; resolve(); };
+            audio.onerror = () => { console.error(`Failed to load audio: ${src}`); resolve(); };
         }));
         return Promise.all(promises);
     }
@@ -178,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. ゲームの主要な流れ (Main Game Flow)
     // =================================================================
     function startGame() {
+        playSfx(audioAssets.gameStart);
         resizeCanvas(); resetGameState(); switchScreen('game');
         state.gameInterval = setInterval(() => {
             if (state.isGameOverSequenceActive) return;
@@ -196,6 +217,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startGameOverSequence() {
         if (state.isGameOverSequenceActive) return;
+        
+        if (currentBgm) {
+            currentBgm.pause();
+            currentBgm.currentTime = 0;
+        }
+
+        playSfx(audioAssets.gameOver);
         state.isGameOverSequenceActive = true;
         state.gameOverEffectTimer = CONFIG.GAME_OVER_SEQUENCE_DURATION;
         createCollisionSparks(state.player.x + state.player.width / 2, state.player.y + state.player.height / 2);
@@ -204,7 +232,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function endGame() {
         clearInterval(state.gameInterval);
         cancelAnimationFrame(state.animationFrameId);
-        dom.displays.finalScore.textContent = state.score;
+        dom.displays.finalScore.textContent = 0; // 表示をリセット
+        animateFinalScore(state.score);
         switchScreen('gameOver');
     }
 
@@ -326,6 +355,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // 8. エンティティ、衝突、スポーン関連 (Entities, Collisions, Spawning)
     // =================================================================
+    function playSfx(sfx) {
+        if (sfx) {
+            sfx.currentTime = 0;
+            sfx.play();
+        }
+    }
+
     function createPlayer(groundY) {
         return {
             x: 50, y: groundY - CONFIG.PLAYER_HEIGHT, width: CONFIG.PLAYER_WIDTH, height: CONFIG.PLAYER_HEIGHT,
@@ -348,6 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (this.jumpsLeft > 0) {
                     this.velocityY = this.jumpForce;
                     this.jumpsLeft--;
+                    playSfx(audioAssets.jump);
                     if (state.jumpUpTimer > 0) createJumpParticles(this.x + this.width / 2, this.y + this.height);
                 }
             }
@@ -520,6 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function activateItem(type, x, y) {
+        playSfx(audioAssets.itemGet);
         switch(type) {
             case 'scoreUp':
                 state.score += 500;
@@ -649,13 +687,67 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < 15; i++) createParticle(x, y, { color: 'hotpink', size: getRandomInt(8, 18), life: getRandomInt(40, 60), vx: (Math.random() - 0.5) * 8, vy: -Math.random() * 7 - 3, gravity: 0.1 });
     }
 
+    function animateFinalScore(finalScore) {
+        const scoreElement = dom.displays.finalScore;
+        let currentScore = 0;
+        const duration = 1200; // 1.2秒でアニメーション
+        const frameRate = 60; // ターゲットフレームレート
+        const totalFrames = duration / (1000 / frameRate);
+        const increment = finalScore / totalFrames;
+        
+        function updateScore() {
+            currentScore += increment;
+            if (currentScore >= finalScore) {
+                scoreElement.textContent = finalScore;
+            } else {
+                scoreElement.textContent = Math.floor(currentScore);
+                requestAnimationFrame(updateScore);
+            }
+        }
+        updateScore();
+    }
+
     // =================================================================
     // 10. ユーティリティとAPI (Utilities and API)
     // =================================================================
+    function playBgm(bgm) {
+        if (currentBgm === bgm && !currentBgm.paused) return;
+        if (currentBgm) {
+            currentBgm.pause();
+            currentBgm.currentTime = 0;
+        }
+        currentBgm = bgm;
+        if (currentBgm) {
+            currentBgm.loop = true;
+            currentBgm.volume = 0.3;
+            // ユーザーの操作を待たずに再生を試みる
+            const playPromise = currentBgm.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    // 自動再生が失敗した場合は、ユーザーの操作を待つ。
+                    // エラーはコンソールに表示されるが、処理は続行する。
+                    console.log("BGM autoplay was prevented by the browser.");
+                });
+            }
+        }
+    }
+
     function switchScreen(screenName) {
         state.currentScreen = screenName;
         Object.values(dom.screens).forEach(s => s.classList.remove('active'));
         dom.screens[screenName].classList.add('active');
+
+        switch(screenName) {
+            case 'title':
+            case 'ranking':
+            case 'gameOver':
+            case 'admin':
+                playBgm(audioAssets.bgmMenu);
+                break;
+            case 'game':
+                playBgm(audioAssets.bgmGame);
+                break;
+        }
     }
     function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
     function isColliding(rect1, rect2) { return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y; }
@@ -750,6 +842,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupEventListeners() {
+        function handleFirstInteraction() {
+            if (userInteracted) return;
+            userInteracted = true;
+            if (currentBgm && currentBgm.paused) {
+                playBgm(currentBgm);
+            }
+        }
+        document.body.addEventListener('click', handleFirstInteraction, { once: true });
+        document.body.addEventListener('keydown', handleFirstInteraction, { once: true });
+
         dom.titleImage.addEventListener('click', startGame);
         dom.buttons.jump.addEventListener('click', handleInput);
         dom.canvas.addEventListener('mousedown', handleInput);
