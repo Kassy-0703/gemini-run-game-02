@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupEventListeners();
         Promise.all([loadAssets(), loadAudio()]).then(([assetLoadResult]) => {
             debugInfo = assetLoadResult; // 読み込み結果を保存
-            loadedBackgroundImages = Object.keys(ASSET_PATHS).filter(k => k.startsWith('background') && assets[k]).map(k => assets[k]);
+            // ここで loadedBackgroundImages を設定するのをやめる
             resizeCanvas();
             switchScreen('title');
         }).catch(error => { 
@@ -361,33 +361,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawBackground() {
-        // 読み込み済みの画像があれば、描画する
-        if (loadedBackgroundImages.length > 0) {
+        // 毎フレーム、読み込みが完了している背景画像のリストを再生成する
+        const currentLoadedImages = Object.keys(ASSET_PATHS)
+            .filter(k => k.startsWith('background') && assets[k] && assets[k].naturalHeight > 0)
+            .map(k => assets[k]);
+
+        if (currentLoadedImages.length > 0) {
             const widthMultiplier = 1.5;
             let totalWidth = 0;
             
-            loadedBackgroundImages.forEach(img => {
-                if (img && img.height > 0) {
-                    totalWidth += (img.width * (dom.canvas.height / img.height)) * widthMultiplier;
-                }
+            currentLoadedImages.forEach(img => {
+                totalWidth += (img.width * (dom.canvas.height / img.height)) * widthMultiplier;
             });
 
             if (totalWidth > 0) {
                 let x = state.backgroundScrollX % totalWidth;
                 if (x > 0) x -= totalWidth;
                 while (x < dom.canvas.width) {
-                    for (const img of loadedBackgroundImages) {
-                        if (img && img.height > 0) {
-                            const w = (img.width * (dom.canvas.height / img.height)) * widthMultiplier;
-                            if (w > 0) {
-                                ctx.drawImage(img, x, 0, w, dom.canvas.height);
-                                x += w;
-                            }
+                    for (const img of currentLoadedImages) {
+                        const w = (img.width * (dom.canvas.height / img.height)) * widthMultiplier;
+                        if (w > 0) {
+                            ctx.drawImage(img, x, 0, w, dom.canvas.height);
+                            x += w;
                         }
                     }
                 }
             }
         }
+        // 画像が読み込まれていない場合は、デフォルトの白いキャンバスが表示される
     }
 
     function drawGround() {
