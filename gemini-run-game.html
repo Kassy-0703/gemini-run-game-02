@@ -164,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     function main() {
         lucide.createIcons();
+        resetGameState(); // Initialize state object on startup
         setupEventListeners();
         Promise.all([loadAssets(), loadAudio()]).then(([assetLoadResult]) => {
             debugInfo = assetLoadResult;
@@ -221,14 +222,31 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function resetGameState() {
         const groundY = CONFIG.GAME_HEIGHT - CONFIG.GROUND_Y_OFFSET;
-        state = {
-            player: createPlayer(groundY), obstacles: [], items: [], visualEffects: [],
-            score: 0, timer: CONFIG.INITIAL_TIMER, gameSpeed: CONFIG.BASE_GAME_SPEED, baseSpeed: CONFIG.BASE_GAME_SPEED,
-            frameCount: 0, backgroundScrollX: 0, groundScrollX: 0, spawnCooldown: 120,
-            itemSpawnCooldown: getRandomInt(300, 500), invincibilityTimer: 0, speedUpTimer: 0, jumpUpTimer: 0,
-            isGameOverSequenceActive: false, gameOverEffectTimer: 0,
-            currentScreen: 'title', groundY: groundY, gameHasEnded: false,
-        };
+        
+        // Clear arrays
+        if (state.obstacles) state.obstacles.length = 0; else state.obstacles = [];
+        if (state.items) state.items.length = 0; else state.items = [];
+        if (state.visualEffects) state.visualEffects.length = 0; else state.visualEffects = [];
+
+        // Reset properties
+        state.player = createPlayer(groundY);
+        state.score = 0;
+        state.timer = CONFIG.INITIAL_TIMER;
+        state.gameSpeed = CONFIG.BASE_GAME_SPEED;
+        state.baseSpeed = CONFIG.BASE_GAME_SPEED;
+        state.frameCount = 0;
+        state.backgroundScrollX = 0;
+        state.groundScrollX = 0;
+        state.spawnCooldown = 120;
+        state.itemSpawnCooldown = getRandomInt(300, 500);
+        state.invincibilityTimer = 0;
+        state.speedUpTimer = 0;
+        state.jumpUpTimer = 0;
+        state.isGameOverSequenceActive = false;
+        state.gameOverEffectTimer = 0;
+        state.currentScreen = 'title';
+        state.groundY = groundY;
+        state.gameHasEnded = false;
     }
 
     // =================================================================
