@@ -935,11 +935,9 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.buttons.admin.addEventListener('click', (e) => { e.stopPropagation(); switchScreen('admin'); });
         
         const backToTitleAction = () => {
-            // 1. ゲームを完全に停止させる
-            endGame(false); // falseを渡して、gameOver画面への遷移を抑制
-            // 2. ゲームの状態をリセットする
+            // 1. ゲームの状態をリセットする
             resetGameState();
-            // 3. 最後にタイトル画面へ遷移する
+            // 2. 最後にタイトル画面へ遷移する
             switchScreen('title');
         };
 
