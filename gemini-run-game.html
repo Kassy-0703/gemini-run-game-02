@@ -361,11 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawBackground() {
-        // 1. まずフォールバック用の背景色で全体を塗りつぶす
-        ctx.fillStyle = '#d1e5f0';
-        ctx.fillRect(0, 0, dom.canvas.width, dom.canvas.height);
-
-        // 2. 読み込み済みの画像があれば、背景色の上に描画する
+        // 読み込み済みの画像があれば、描画する
         if (loadedBackgroundImages.length > 0) {
             const widthMultiplier = 1.5;
             let totalWidth = 0;
