@@ -955,9 +955,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.buttons.admin.addEventListener('click', (e) => { e.stopPropagation(); switchScreen('admin'); });
         
         const backToTitleAction = () => {
-            // 1. ゲームの状態をリセットする
-            resetGameState();
-            // 2. 最後にタイトル画面へ遷移する
+            // 状態リセットは行わず、タイトル画面への切り替えに専念させる
             switchScreen('title');
         };
 
