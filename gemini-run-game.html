@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const loadPromise = assetEntries.reduce((promiseChain, [key, src]) => {
             return promiseChain.then(() => new Promise(resolve => {
                 const img = new Image();
-                img.src = src + '?t=' + new Date().getTime();
+                img.src = src;
                 
                 img.onload = () => {
                     // 最も信頼性の高いチェック：画像の本来の高さが利用可能か確認
