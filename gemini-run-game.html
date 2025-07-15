@@ -941,10 +941,17 @@ document.addEventListener('DOMContentLoaded', () => {
             switchScreen('title');
         };
 
-        dom.buttons.backToTitle.addEventListener('click', backToTitleAction);
-        dom.buttons.backToTitleFromGO.addEventListener('click', backToTitleAction);
+        dom.buttons.backToTitle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            backToTitleAction();
+        });
+        dom.buttons.backToTitleFromGO.addEventListener('click', (e) => {
+            e.stopPropagation();
+            backToTitleAction();
+        });
         
-        dom.buttons.backToTitleFromAdmin.addEventListener('click', () => {
+        dom.buttons.backToTitleFromAdmin.addEventListener('click', (e) => {
+            e.stopPropagation();
             dom.displays.adminMessage.textContent = '';
             dom.inputs.adminPassword.value = '';
             backToTitleAction();
