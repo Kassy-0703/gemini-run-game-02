@@ -335,19 +335,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loadedBackgroundImages.length > 0) {
             const widthMultiplier = 1.5;
             let totalWidth = 0;
-            loadedBackgroundImages.forEach(img => totalWidth += (img.width * (dom.canvas.height / img.height)) * widthMultiplier);
+            
+            // 安全装置：画像の高さが0より大きい（＝読み込み完了している）場合のみ計算対象とする
+            loadedBackgroundImages.forEach(img => {
+                if (img && img.height > 0) {
+                    totalWidth += (img.width * (dom.canvas.height / img.height)) * widthMultiplier;
+                }
+            });
+
             if (totalWidth > 0) {
                 let x = state.backgroundScrollX % totalWidth;
                 if (x > 0) x -= totalWidth;
                 while (x < dom.canvas.width) {
                     for (const img of loadedBackgroundImages) {
-                        const w = (img.width * (dom.canvas.height / img.height)) * widthMultiplier;
-                        ctx.drawImage(img, x, 0, w, dom.canvas.height);
-                        x += w;
+                        // 安全装置：ここでも、読み込みが完了した画像のみを描画する
+                        if (img && img.height > 0) {
+                            const w = (img.width * (dom.canvas.height / img.height)) * widthMultiplier;
+                            if (w > 0) {
+                                ctx.drawImage(img, x, 0, w, dom.canvas.height);
+                                x += w;
+                            }
+                        }
                     }
                 }
             }
         } else {
+            // フォールバック用の背景色
             ctx.fillStyle = '#d1e5f0';
             ctx.fillRect(0, 0, dom.canvas.width, dom.canvas.height);
         }
