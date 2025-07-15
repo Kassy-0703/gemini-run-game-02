@@ -185,23 +185,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const loadPromise = assetEntries.reduce((promiseChain, [key, src]) => {
             return promiseChain.then(() => new Promise(resolve => {
                 const img = new Image();
-                // キャッシュを無効化して強制的に再読み込みさせる
                 img.src = src + '?t=' + new Date().getTime();
+                
                 img.onload = () => {
-                    assets[key] = img;
-                    loaded.push(src.split('/').pop());
+                    // 最も信頼性の高いチェック：画像の本来の高さが利用可能か確認
+                    if (img.naturalHeight > 0) {
+                        assets[key] = img;
+                        loaded.push(src.split('/').pop());
+                    } else {
+                        // onloadが発火してもサイズが0の場合は失敗とみなす
+                        assets[key] = null;
+                        failed.push(src.split('/').pop() + ' (dims=0)');
+                        console.error(`Image loaded but has zero dimensions: ${src}`);
+                    }
                     resolve();
                 };
+
                 img.onerror = () => {
                     assets[key] = null;
-                    failed.push(src.split('/').pop());
-                    console.error(`Failed to load image: ${src}`);
+                    failed.push(src.split('/').pop() + ' (error)');
+                    console.error(`Failed to load image with error event: ${src}`);
                     resolve(); 
                 };
             }));
         }, Promise.resolve());
 
-        // 読み込み完了後にデバッグ情報を返す
         return loadPromise.then(() => ({ loaded, failed }));
     }
     
