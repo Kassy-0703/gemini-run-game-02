@@ -2,15 +2,23 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
     <title>新郎新婦の筑波ダッシュ！ (仮)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { -webkit-user-select: none; user-select: none; }
+        html, body {
+            overflow: hidden;
+            touch-action: manipulation; /* スクロールやダブルタップズームを無効化 */
+        }
         .screen { display: none; }
         .screen.active { display: flex; }
-        canvas { background-color: #ffffff; border: 2px solid #333; }
+        canvas {
+            background-color: #ffffff;
+            border: 2px solid #333;
+            -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを消す */
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans">
@@ -853,10 +861,26 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.addEventListener('keydown', handleFirstInteraction, { once: true });
 
         dom.titleImage.addEventListener('click', startGame);
-        dom.buttons.jump.addEventListener('click', handleInput);
-        dom.canvas.addEventListener('mousedown', handleInput);
-        dom.canvas.addEventListener('touchstart', handleInput, { passive: false });
+        
+        // --- スマホ・PC両対応の入力ハンドリング ---
+        const gameScreen = dom.screens.game;
+        gameScreen.addEventListener('mousedown', handleInput);
+        gameScreen.addEventListener('touchstart', handleInput, { passive: false });
         window.addEventListener('keydown', (e) => { if (e.code === 'Space') handleInput(e); });
+        
+        // ジャンプボタンのクリックが親要素(gameScreen)に伝播しないようにする
+        dom.buttons.jump.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleInput(e);
+        });
+
+        // スワイプによるページスクロールを防止
+        window.addEventListener('touchmove', (e) => {
+            if (state.currentScreen === 'game') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
         window.addEventListener('resize', resizeCanvas);
         dom.buttons.ranking.addEventListener('click', (e) => { 
             e.stopPropagation(); 
