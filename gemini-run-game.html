@@ -97,9 +97,8 @@
                 <p id="admin-message" class="text-center text-sm text-gray-600"></p>
             </div>
             <button id="back-to-title-from-admin" class="mt-4 text-gray-600 hover:underline">タイトルへ戻る</button>
+        </div>
     </div>
-    <div id="debug-log" style="position: fixed; bottom: 0; left: 0; width: 100%; height: 100px; background: rgba(0,0,0,0.7); color: white; font-size: 10px; overflow-y: scroll; z-index: 9999; padding: 5px; box-sizing: border-box; font-family: monospace;"></div>
-</div>
 
 <script>
 // リファクタリング済みの完全なJavaScriptコード
@@ -152,15 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
         rankingForm: document.getElementById('ranking-form'), rankingList: document.getElementById('ranking-list'),
     };
     const ctx = dom.canvas.getContext('2d');
-    const debugLog = document.getElementById('debug-log');
-    let logCounter = 0;
-    function log(message) {
-        logCounter++;
-        const logEntry = document.createElement('div');
-        logEntry.textContent = `${logCounter}: ${message}`;
-        debugLog.appendChild(logEntry);
-        debugLog.scrollTop = debugLog.scrollHeight;
-    }
 
     // =================================================================
     // 3. ゲーム状態変数 (Game State Variables)
@@ -174,12 +164,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     function main() {
         lucide.createIcons();
-        resetGameState(); // Initialize state object on startup
         setupEventListeners();
         Promise.all([loadAssets(), loadAudio()]).then(([assetLoadResult]) => {
             debugInfo = assetLoadResult;
             resizeCanvas();
             switchScreen('title');
+            playBgm(audioAssets.bgmMenu);
         }).catch(error => { 
             console.error("Asset loading failed:", error);
             debugInfo = { error: error.message };
@@ -232,102 +222,59 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function resetGameState() {
         const groundY = CONFIG.GAME_HEIGHT - CONFIG.GROUND_Y_OFFSET;
-        
-        // Clear arrays
-        if (state.obstacles) state.obstacles.length = 0; else state.obstacles = [];
-        if (state.items) state.items.length = 0; else state.items = [];
-        if (state.visualEffects) state.visualEffects.length = 0; else state.visualEffects = [];
-
-        // Reset properties
-        state.player = createPlayer(groundY);
-        state.score = 0;
-        state.timer = CONFIG.INITIAL_TIMER;
-        state.gameSpeed = CONFIG.BASE_GAME_SPEED;
-        state.baseSpeed = CONFIG.BASE_GAME_SPEED;
-        state.frameCount = 0;
-        state.backgroundScrollX = 0;
-        state.groundScrollX = 0;
-        state.spawnCooldown = 120;
-        state.itemSpawnCooldown = getRandomInt(300, 500);
-        state.invincibilityTimer = 0;
-        state.speedUpTimer = 0;
-        state.jumpUpTimer = 0;
-        state.isGameOverSequenceActive = false;
-        state.gameOverEffectTimer = 0;
-        state.currentScreen = 'title';
-        state.groundY = groundY;
-        state.gameHasEnded = false;
+        state = {
+            player: createPlayer(groundY), obstacles: [], items: [], visualEffects: [],
+            score: 0, timer: CONFIG.INITIAL_TIMER, gameSpeed: CONFIG.BASE_GAME_SPEED, baseSpeed: CONFIG.BASE_GAME_SPEED,
+            frameCount: 0, backgroundScrollX: 0, groundScrollX: 0, spawnCooldown: 120,
+            itemSpawnCooldown: getRandomInt(300, 500), invincibilityTimer: 0, speedUpTimer: 0, jumpUpTimer: 0,
+            isGameOverSequenceActive: false, gameOverEffectTimer: 0,
+            currentScreen: 'title', groundY: groundY,
+        };
     }
 
     // =================================================================
     // 5. ゲームの主要な流れ (Main Game Flow)
     // =================================================================
     function startGame() {
-        log('--- startGame CALLED ---');
         if (animationFrameId) {
-            log(`Existing animationFrameId found: ${animationFrameId}. Clearing.`);
             cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
         }
         if (gameInterval) {
-            log(`Existing gameInterval found: ${gameInterval}. Clearing.`);
             clearInterval(gameInterval);
-            gameInterval = null;
         }
 
-        log('Playing gameStart sfx');
         playSfx(audioAssets.gameStart);
-        
-        log('Calling resetGameState');
         resetGameState(); 
-        
-        log('Switching to game screen');
         switchScreen('game');
+        playBgm(audioAssets.bgmGame);
 
         requestAnimationFrame(() => {
-            log('Requesting animation frame for resizeCanvas');
             resizeCanvas();
         });
         
-        log('Setting up game interval');
         gameInterval = setInterval(() => {
             if (state.isGameOverSequenceActive) return;
             state.timer--;
-            if (state.timer <= 0) {
-                log('Timer reached 0. Starting game over sequence.');
-                startGameOverSequence();
-            }
+            if (state.timer <= 0) startGameOverSequence();
         }, 1000);
-
-        log('Calling gameLoop for the first time');
         gameLoop();
     }
 
     function gameLoop() {
-        if (state.gameHasEnded) {
-            log('gameLoop STOPPED: gameHasEnded is true.');
-            return;
-        }
-        update(); 
-        draw();
+        update(); draw();
         if (state.currentScreen === 'game' || state.isGameOverSequenceActive) {
             animationFrameId = requestAnimationFrame(gameLoop);
-        } else {
-            log(`gameLoop STOPPED: currentScreen=${state.currentScreen}, isGameOverSequenceActive=${state.isGameOverSequenceActive}`);
         }
     }
 
     function startGameOverSequence() {
         if (state.isGameOverSequenceActive) return;
-        log('--- startGameOverSequence CALLED ---');
         
         if (currentBgm) {
-            log('Pausing BGM');
             currentBgm.pause();
             currentBgm.currentTime = 0;
         }
 
-        log('Playing gameOver sfx');
         playSfx(audioAssets.gameOver);
         state.isGameOverSequenceActive = true;
         state.gameOverEffectTimer = CONFIG.GAME_OVER_SEQUENCE_DURATION;
@@ -335,25 +282,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function endGame(switchToGameOverScreen = true) {
-        log('--- endGame CALLED ---');
-        if (state.gameHasEnded) {
-            log('endGame aborted: game has already ended.');
-            return;
-        }
-        state.gameHasEnded = true;
-        log(`Clearing interval: ${gameInterval}`);
         clearInterval(gameInterval);
-        log(`Clearing animation frame: ${animationFrameId}`);
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
         gameInterval = null;
 
-        state.isGameOverSequenceActive = false;
-        log(`switchToGameOverScreen: ${switchToGameOverScreen}`);
         if (switchToGameOverScreen) {
-            dom.displays.finalScore.textContent = state.score;
-            log(`Switching to gameOver screen. Final score: ${state.score}`);
+            dom.displays.finalScore.textContent = state.score; // Direct score display
             switchScreen('gameOver');
+            playBgm(audioAssets.bgmMenu);
         }
     }
 
@@ -702,7 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 9. エ���ェクトとUI (Effects and UI)
+    // 9. エフェクトとUI (Effects and UI)
     // =================================================================
     function updateItemEffects() {
         let effectMessage = '';
@@ -850,18 +787,6 @@ document.addEventListener('DOMContentLoaded', () => {
         state.currentScreen = screenName;
         Object.values(dom.screens).forEach(s => s.classList.remove('active'));
         dom.screens[screenName].classList.add('active');
-
-        switch(screenName) {
-            case 'title':
-            case 'ranking':
-            case 'gameOver':
-            case 'admin':
-                playBgm(audioAssets.bgmMenu);
-                break;
-            case 'game':
-                playBgm(audioAssets.bgmGame);
-                break;
-        }
     }
     function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
     function isColliding(rect1, rect2) { return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y; }
@@ -937,12 +862,13 @@ document.addEventListener('DOMContentLoaded', () => {
             dom.inputs.playerName.value = '';
             await displayRankings();
             switchScreen('ranking');
+            playBgm(audioAssets.bgmMenu);
         }
     }
 
     async function handleRankingReset() {
         const password = dom.inputs.adminPassword.value;
-        dom.displays.adminMessage.textContent = 'リセット中...';
+        dom.displays.adminMessage.textContent = 'リセッ���中...';
         try {
             const response = await fetch(`${CONFIG.API_BASE_URL}/rankings/reset`, {
                 method: 'POST',
@@ -990,30 +916,32 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.buttons.ranking.addEventListener('click', (e) => { 
             e.stopPropagation(); 
             switchScreen('ranking'); 
+            playBgm(audioAssets.bgmMenu);
             displayRankings(); 
         });
-        dom.buttons.admin.addEventListener('click', (e) => { e.stopPropagation(); switchScreen('admin'); });
+        dom.buttons.admin.addEventListener('click', (e) => { 
+            e.stopPropagation(); 
+            switchScreen('admin');
+            playBgm(audioAssets.bgmMenu);
+        });
         
-        const backToTitleAction = (from) => {
-            log(`--- backToTitleAction CALLED from: ${from} ---`);
-            // 状態リセットは行わず、タイトル画面への切り替えに専念させる
+        const backToTitleAction = () => {
+            // 1. ゲームを完全に停止させる
+            endGame(false); // falseを渡して、gameOver画面への遷移を抑制
+            // 2. ゲームの状態をリセットする
+            resetGameState();
+            // 3. 最後にタイトル画面へ遷移する
             switchScreen('title');
+            playBgm(audioAssets.bgmMenu);
         };
 
-        dom.buttons.backToTitle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            backToTitleAction('ranking');
-        });
-        dom.buttons.backToTitleFromGO.addEventListener('click', (e) => {
-            e.stopPropagation();
-            backToTitleAction('gameOver');
-        });
+        dom.buttons.backToTitle.addEventListener('click', backToTitleAction);
+        dom.buttons.backToTitleFromGO.addEventListener('click', backToTitleAction);
         
-        dom.buttons.backToTitleFromAdmin.addEventListener('click', (e) => {
-            e.stopPropagation();
+        dom.buttons.backToTitleFromAdmin.addEventListener('click', () => {
             dom.displays.adminMessage.textContent = '';
             dom.inputs.adminPassword.value = '';
-            backToTitleAction('admin');
+            backToTitleAction();
         });
 
         dom.rankingForm.addEventListener('submit', handleRankingSubmit);
