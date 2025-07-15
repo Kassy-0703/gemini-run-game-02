@@ -97,8 +97,9 @@
                 <p id="admin-message" class="text-center text-sm text-gray-600"></p>
             </div>
             <button id="back-to-title-from-admin" class="mt-4 text-gray-600 hover:underline">タイトルへ戻る</button>
-        </div>
     </div>
+    <div id="debug-log" style="position: fixed; bottom: 0; left: 0; width: 100%; height: 100px; background: rgba(0,0,0,0.7); color: white; font-size: 10px; overflow-y: scroll; z-index: 9999; padding: 5px; box-sizing: border-box; font-family: monospace;"></div>
+</div>
 
 <script>
 // リファクタリング済みの完全なJavaScriptコード
@@ -151,6 +152,15 @@ document.addEventListener('DOMContentLoaded', () => {
         rankingForm: document.getElementById('ranking-form'), rankingList: document.getElementById('ranking-list'),
     };
     const ctx = dom.canvas.getContext('2d');
+    const debugLog = document.getElementById('debug-log');
+    let logCounter = 0;
+    function log(message) {
+        logCounter++;
+        const logEntry = document.createElement('div');
+        logEntry.textContent = `${logCounter}: ${message}`;
+        debugLog.appendChild(logEntry);
+        debugLog.scrollTop = debugLog.scrollHeight;
+    }
 
     // =================================================================
     // 3. ゲーム状態変数 (Game State Variables)
@@ -253,47 +263,71 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. ゲームの主要な流れ (Main Game Flow)
     // =================================================================
     function startGame() {
+        log('--- startGame CALLED ---');
         if (animationFrameId) {
+            log(`Existing animationFrameId found: ${animationFrameId}. Clearing.`);
             cancelAnimationFrame(animationFrameId);
             animationFrameId = null;
         }
         if (gameInterval) {
+            log(`Existing gameInterval found: ${gameInterval}. Clearing.`);
             clearInterval(gameInterval);
             gameInterval = null;
         }
 
+        log('Playing gameStart sfx');
         playSfx(audioAssets.gameStart);
+        
+        log('Calling resetGameState');
         resetGameState(); 
+        
+        log('Switching to game screen');
         switchScreen('game');
 
         requestAnimationFrame(() => {
+            log('Requesting animation frame for resizeCanvas');
             resizeCanvas();
         });
         
+        log('Setting up game interval');
         gameInterval = setInterval(() => {
             if (state.isGameOverSequenceActive) return;
             state.timer--;
-            if (state.timer <= 0) startGameOverSequence();
+            if (state.timer <= 0) {
+                log('Timer reached 0. Starting game over sequence.');
+                startGameOverSequence();
+            }
         }, 1000);
+
+        log('Calling gameLoop for the first time');
         gameLoop();
     }
 
     function gameLoop() {
-        if (state.gameHasEnded) return;
-        update(); draw();
+        if (state.gameHasEnded) {
+            log('gameLoop STOPPED: gameHasEnded is true.');
+            return;
+        }
+        update(); 
+        draw();
         if (state.currentScreen === 'game' || state.isGameOverSequenceActive) {
             animationFrameId = requestAnimationFrame(gameLoop);
+        } else {
+            log(`gameLoop STOPPED: currentScreen=${state.currentScreen}, isGameOverSequenceActive=${state.isGameOverSequenceActive}`);
         }
     }
 
     function startGameOverSequence() {
         if (state.isGameOverSequenceActive) return;
+        log('--- startGameOverSequence CALLED ---');
         
         if (currentBgm) {
+            log('Pausing BGM');
             currentBgm.pause();
             currentBgm.currentTime = 0;
         }
 
+        log('Playing gameOver sfx');
         playSfx(audioAssets.gameOver);
         state.isGameOverSequenceActive = true;
         state.gameOverEffectTimer = CONFIG.GAME_OVER_SEQUENCE_DURATION;
@@ -301,18 +335,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function endGame(switchToGameOverScreen = true) {
+        log('--- endGame CALLED ---');
+        if (state.gameHasEnded) {
+            log('endGame aborted: game has already ended.');
+            return;
+        }
         state.gameHasEnded = true;
+        log(`Clearing interval: ${gameInterval}`);
         clearInterval(gameInterval);
+        log(`Clearing animation frame: ${animationFrameId}`);
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
         gameInterval = null;
 
-        // ゲームオーバーシーケンスが終了したことを明確にする
         state.isGameOverSequenceActive = false;
-
+        log(`switchToGameOverScreen: ${switchToGameOverScreen}`);
         if (switchToGameOverScreen) {
-            // アニメーションを一時的に無効化し、直接スコアを設定する
             dom.displays.finalScore.textContent = state.score;
+            log(`Switching to gameOver screen. Final score: ${state.score}`);
             switchScreen('gameOver');
         }
     }
@@ -954,25 +994,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         dom.buttons.admin.addEventListener('click', (e) => { e.stopPropagation(); switchScreen('admin'); });
         
-        const backToTitleAction = () => {
+        const backToTitleAction = (from) => {
+            log(`--- backToTitleAction CALLED from: ${from} ---`);
             // 状態リセットは行わず、タイトル画面への切り替えに専念させる
             switchScreen('title');
         };
 
         dom.buttons.backToTitle.addEventListener('click', (e) => {
             e.stopPropagation();
-            backToTitleAction();
+            backToTitleAction('ranking');
         });
         dom.buttons.backToTitleFromGO.addEventListener('click', (e) => {
             e.stopPropagation();
-            backToTitleAction();
+            backToTitleAction('gameOver');
         });
         
         dom.buttons.backToTitleFromAdmin.addEventListener('click', (e) => {
             e.stopPropagation();
             dom.displays.adminMessage.textContent = '';
             dom.inputs.adminPassword.value = '';
-            backToTitleAction();
+            backToTitleAction('admin');
         });
 
         dom.rankingForm.addEventListener('submit', handleRankingSubmit);
