@@ -760,22 +760,33 @@ document.addEventListener('DOMContentLoaded', () => {
     function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
     function isColliding(rect1, rect2) { return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y; }
     function resizeCanvas() {
-        const containerWidth = dom.canvas.parentElement.clientWidth - 32;
+        const container = dom.canvas.parentElement;
+        const availableWidth = container.clientWidth;
+        // 画面の高さの80%をゲーム領域として使用し、UIのスペースを確保
+        const availableHeight = window.innerHeight * 0.8;
+
+        const aspectRatio = CONFIG.GAME_WIDTH / CONFIG.GAME_HEIGHT;
+
+        // 横幅と高さの両方を考慮し、最適な縮尺を計算
+        const scale = Math.min(availableWidth / CONFIG.GAME_WIDTH, availableHeight / CONFIG.GAME_HEIGHT);
+
+        const displayWidth = CONFIG.GAME_WIDTH * scale;
+        const displayHeight = CONFIG.GAME_HEIGHT * scale;
+
+        // Canvasの内部解像度を設定
         dom.canvas.width = CONFIG.GAME_WIDTH;
         dom.canvas.height = CONFIG.GAME_HEIGHT;
-        const aspectRatio = CONFIG.GAME_WIDTH / CONFIG.GAME_HEIGHT;
-        let displayWidth = containerWidth;
-        let displayHeight = containerWidth / aspectRatio;
-        const maxAllowedHeight = window.innerHeight * 0.8;
-        if (displayHeight > maxAllowedHeight) {
-            displayHeight = maxAllowedHeight;
-            displayWidth = displayHeight * aspectRatio;
-        }
+
+        // Canvasの表示サイズをCSSで設定
         dom.canvas.style.width = `${displayWidth}px`;
         dom.canvas.style.height = `${displayHeight}px`;
+
         if (state.player) {
             state.groundY = CONFIG.GAME_HEIGHT - CONFIG.GROUND_Y_OFFSET;
-            state.player.y = state.groundY - state.player.height;
+            // リサイズ後にプレイヤーが地面に埋まらないように位置を再設定
+            if (state.player.y + state.player.height > state.groundY) {
+                state.player.y = state.groundY - state.player.height;
+            }
         }
     }
     
