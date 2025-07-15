@@ -287,6 +287,9 @@ document.addEventListener('DOMContentLoaded', () => {
         animationFrameId = null;
         gameInterval = null;
 
+        // ゲームオーバーシーケンスが終了したことを明確にする
+        state.isGameOverSequenceActive = false;
+
         if (switchToGameOverScreen) {
             // アニメーションを一時的に無効化し、直接スコアを設定する
             dom.displays.finalScore.textContent = state.score;
