@@ -274,12 +274,17 @@ document.addEventListener('DOMContentLoaded', () => {
         createCollisionSparks(state.player.x + state.player.width / 2, state.player.y + state.player.height / 2);
     }
 
-    function endGame() {
+    function endGame(switchToGameOverScreen = true) {
         clearInterval(state.gameInterval);
         cancelAnimationFrame(state.animationFrameId);
-        dom.displays.finalScore.textContent = 0;
-        animateFinalScore(state.score);
-        switchScreen('gameOver');
+        state.animationFrameId = null; // 停止したことを明確にする
+        state.gameInterval = null;
+
+        if (switchToGameOverScreen) {
+            dom.displays.finalScore.textContent = 0;
+            animateFinalScore(state.score);
+            switchScreen('gameOver');
+        }
     }
 
     // =================================================================
@@ -929,6 +934,8 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.buttons.admin.addEventListener('click', (e) => { e.stopPropagation(); switchScreen('admin'); });
         
         const backToTitleAction = () => {
+            // ゲームが動作中かもしれないので、まず完全に停止させる
+            endGame(false); // falseを渡して、gameOver画面への遷移を抑制
             resetGameState();
             switchScreen('title');
         };
