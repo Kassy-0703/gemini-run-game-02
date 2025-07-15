@@ -354,14 +354,29 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.displays.timer.textContent = state.timer;
 
         // --- デバッグ情報描画 ---
-        if (debugInfo.failed && debugInfo.failed.length > 0) {
-            ctx.fillStyle = 'red';
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'left';
-            ctx.fillText('Failed to load:', 10, 20);
-            debugInfo.failed.forEach((file, i) => {
-                ctx.fillText(file, 10, 35 + (i * 15));
-            });
+        ctx.fillStyle = 'black';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'left';
+        let debugY = 20;
+        const log = (msg) => {
+            ctx.fillText(msg, 10, debugY);
+            debugY += 18;
+        };
+
+        log('--- DEBUG INFO ---');
+        const bgAsset = assets.background;
+        if (bgAsset) {
+            log(`assets.background: Loaded`);
+            log(`  naturalWidth: ${bgAsset.naturalWidth}`);
+            log(`  naturalHeight: ${bgAsset.naturalHeight}`);
+        } else {
+            log(`assets.background: Not loaded (null or undefined)`);
+        }
+        
+        if (debugInfo && debugInfo.failed && debugInfo.failed.length > 0) {
+            log(`debugInfo.failed: [${debugInfo.failed.join(', ')}]`);
+        } else {
+            log(`debugInfo.failed: []`);
         }
 
         // 赤いフラッシュ演出
