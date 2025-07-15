@@ -337,23 +337,27 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- 描画処理 (常に実行) ---
         ctx.clearRect(-50, -50, dom.canvas.width + 100, dom.canvas.height + 100); // 揺れを考慮して広めにクリア
 
-        // 背景描画
+        // 1. まずフォールバック用の背景色で全��を塗りつぶす
+        ctx.fillStyle = '#d1e5f0';
+        ctx.fillRect(0, 0, dom.canvas.width, dom.canvas.height);
+
+        // 2. 背景画像を描画（成功すれば背景色を上書きする）
         drawBackground();
 
-        // 地面描画
+        // 3. 地面を描画
         drawGround();
 
-        // アイテム、障害物、プレイヤー、エフェクトの描画
+        // 4. アイテム、障害物、プレイヤー、エフェクトの描画
         state.items.forEach(item => item.draw());
         state.obstacles.forEach(o => o.draw());
         state.player.draw();
         state.visualEffects.forEach(e => e.draw());
 
-        // UIの更新
+        // 5. UIの更新
         dom.displays.score.textContent = state.score;
         dom.displays.timer.textContent = state.timer;
 
-        // --- デバッグ情報描画 ---
+        // 6. デバッグ情報描画 (他のすべての要素の上に描画される)
         ctx.fillStyle = 'black';
         ctx.font = '14px Arial';
         ctx.textAlign = 'left';
@@ -379,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
             log(`debugInfo.failed: []`);
         }
 
-        // 赤いフラッシュ演出
+        // 7. 赤いフラッシュ演出 (ゲームオーバー時)
         if (state.isGameOverSequenceActive) {
             const flashOpacity = Math.max(0, state.gameOverEffectTimer / CONFIG.GAME_OVER_SEQUENCE_DURATION) * 0.7;
             ctx.fillStyle = `rgba(255, 0, 0, ${flashOpacity})`;
@@ -390,16 +394,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawBackground() {
-        // デバッグのため、背景描画ロジックを極端に単純化
+        // draw関数本体でフォールバック背景色が描画されるようになったため、
+        // ここでは画像が読み込めている場合のみ描画処理を行う。
         const bgImage = assets.background;
-
         if (bgImage && bgImage.naturalHeight > 0) {
-            // 画像が読み込めていれば、スクロールなしで画面全体に描画する
             ctx.drawImage(bgImage, 0, 0, dom.canvas.width, dom.canvas.height);
-        } else {
-            // フォールバック用の背景色
-            ctx.fillStyle = '#d1e5f0';
-            ctx.fillRect(0, 0, dom.canvas.width, dom.canvas.height);
         }
     }
 
