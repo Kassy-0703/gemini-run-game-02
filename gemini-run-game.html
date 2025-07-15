@@ -286,8 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
         gameInterval = null;
 
         if (switchToGameOverScreen) {
-            dom.displays.finalScore.textContent = 0;
-            animateFinalScore(state.score);
+            // アニメーションを一時的に無効化し、直接スコアを設定する
+            dom.displays.finalScore.textContent = state.score;
             switchScreen('gameOver');
         }
     }
