@@ -209,8 +209,12 @@ document.addEventListener('DOMContentLoaded', () => {
         playSfx(audioAssets.gameStart);
         resetGameState(); 
         switchScreen('game');
-        // switchScreenでゲーム画面が表示された後に、リサイズを実行する
-        resizeCanvas(); 
+
+        // switchScreenで表示が切り替わった後、ブラウザの次の描画タイミングでリサイズを実行
+        // これにより、スマホでの描画遅延によるサイズ計算エラーを確実に防ぐ
+        requestAnimationFrame(() => {
+            resizeCanvas();
+        });
         
         state.gameInterval = setInterval(() => {
             if (state.isGameOverSequenceActive) return;
