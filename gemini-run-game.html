@@ -375,33 +375,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawBackground() {
-        if (loadedBackgroundImages.length > 0) {
-            const widthMultiplier = 1.5;
-            let totalWidth = 0;
-            
-            // 安全装置：画像の高さが0より大きい（＝読み込み完了している）場合のみ計算対象とする
-            loadedBackgroundImages.forEach(img => {
-                if (img && img.height > 0) {
-                    totalWidth += (img.width * (dom.canvas.height / img.height)) * widthMultiplier;
-                }
-            });
+        // デバッグのため、背景描画ロジックを極端に単純化
+        const bgImage = assets.background;
 
-            if (totalWidth > 0) {
-                let x = state.backgroundScrollX % totalWidth;
-                if (x > 0) x -= totalWidth;
-                while (x < dom.canvas.width) {
-                    for (const img of loadedBackgroundImages) {
-                        // 安全装置：ここでも、読み込みが完了した画像のみを描画する
-                        if (img && img.height > 0) {
-                            const w = (img.width * (dom.canvas.height / img.height)) * widthMultiplier;
-                            if (w > 0) {
-                                ctx.drawImage(img, x, 0, w, dom.canvas.height);
-                                x += w;
-                            }
-                        }
-                    }
-                }
-            }
+        if (bgImage && bgImage.naturalHeight > 0) {
+            // 画像が読み込めていれば、スクロールなしで画面全体に描画する
+            ctx.drawImage(bgImage, 0, 0, dom.canvas.width, dom.canvas.height);
         } else {
             // フォールバック用の背景色
             ctx.fillStyle = '#d1e5f0';
