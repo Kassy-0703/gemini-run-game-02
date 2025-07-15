@@ -237,9 +237,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function startGame() {
         if (animationFrameId) {
             cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
         }
         if (gameInterval) {
             clearInterval(gameInterval);
+            gameInterval = null;
         }
 
         playSfx(audioAssets.gameStart);
