@@ -207,7 +207,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     function startGame() {
         playSfx(audioAssets.gameStart);
-        resizeCanvas(); resetGameState(); switchScreen('game');
+        resetGameState(); 
+        switchScreen('game');
+        // switchScreenでゲーム画面が表示された後に、リサイズを実行する
+        resizeCanvas(); 
+        
         state.gameInterval = setInterval(() => {
             if (state.isGameOverSequenceActive) return;
             state.timer--;
@@ -761,28 +765,22 @@ document.addEventListener('DOMContentLoaded', () => {
     function isColliding(rect1, rect2) { return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y; }
     function resizeCanvas() {
         const container = dom.canvas.parentElement;
+        // clientWidthが0の場合(非表示時など)は何もしない
+        if (container.clientWidth === 0) return;
+
         const availableWidth = container.clientWidth;
-        // 画面の高さの80%をゲーム領域として使用し、UIのスペースを確保
         const availableHeight = window.innerHeight * 0.8;
-
-        const aspectRatio = CONFIG.GAME_WIDTH / CONFIG.GAME_HEIGHT;
-
-        // 横幅と高さの両方を考慮し、最適な縮尺を計算
         const scale = Math.min(availableWidth / CONFIG.GAME_WIDTH, availableHeight / CONFIG.GAME_HEIGHT);
-
         const displayWidth = CONFIG.GAME_WIDTH * scale;
         const displayHeight = CONFIG.GAME_HEIGHT * scale;
 
-        // Canvasの内部解像度を設定
         dom.canvas.width = CONFIG.GAME_WIDTH;
         dom.canvas.height = CONFIG.GAME_HEIGHT;
-
-        // Canvasの表示サイズをCSSで設定
         dom.canvas.style.width = `${displayWidth}px`;
         dom.canvas.style.height = `${displayHeight}px`;
 
-        if (state.player) {
-            state.groundY = CONFIG.GAME_HEIGHT - CONFIG.GROUND_Y_OFFSET;
+        // state.groundYが未定義の場合は何もしない
+        if (state.groundY && state.player) {
             // リサイズ後にプレイヤーが地面に埋まらないように位置を再設定
             if (state.player.y + state.player.height > state.groundY) {
                 state.player.y = state.groundY - state.player.height;
