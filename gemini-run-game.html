@@ -237,6 +237,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. ゲームの主要な流れ (Main Game Flow)
     // =================================================================
     function startGame() {
+        // 新しいゲームを開始する前に、古いゲームインスタンスが残っていた場合に備えて強制的に停止させる
+        if (state.animationFrameId) {
+            cancelAnimationFrame(state.animationFrameId);
+        }
+        if (state.gameInterval) {
+            clearInterval(state.gameInterval);
+        }
+
         playSfx(audioAssets.gameStart);
         resetGameState(); 
         switchScreen('game');
