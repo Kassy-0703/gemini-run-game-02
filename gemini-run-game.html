@@ -68,7 +68,7 @@
                 <div class="space-y-2">
                     <div class="flex items-center"><img src="images/item_score_up.png" alt="ちあき♡" class="w-5 h-5 mr-3"><span><strong>ちあき♡:</strong> スコアが500点アップ！</span></div>
                     <div class="flex items-center"><img src="images/item_invincible.png" alt="ラーメン" class="w-5 h-5 mr-3"><span><strong>ラーメン:</strong> ちょっとだけ無敵になる！</span></div>
-                    <div class="flex items-center"><img src="images/item_speed_up.png" alt="ギター" class="w-5 h-5 mr-3"><span><strong>ギター:</strong> しばらく移動速度アップ！</span></div>
+                    <div class="flex items-center"><img src="images/item_speed_up.png" alt="ギター" class="w-5 h-5 mr-3"><span><strong>ギター:</strong> しばらく移動速度アップ��</span></div>
                     <div class="flex items-center"><img src="images/item_jump_up.png" alt="お酒" class="w-5 h-5 mr-3"><span><strong>お酒:</strong> しばらくジャンプ力アップ！</span></div>
                 </div>
             </div>
@@ -119,7 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
         itemScoreUp: 'images/item_score_up.png', itemInvincible: 'images/item_invincible.png',
         itemInvincibleEffect: 'images/item_invincible_02.png', itemSpeedUp: 'images/item_speed_up.png',
         itemJumpUp: 'images/item_jump_up.png', ground: 'images/ground.png', heart: 'images/heart.png',
-        background: 'images/background.png',
+        background1: 'images/background_1.png', background2: 'images/background_2.png',
+        background3: 'images/background_3.png', background4: 'images/background_4.png',
     };
     const AUDIO_PATHS = {
         bgmMenu: 'audio/bgm_menu.mp3',
@@ -158,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let debugInfo = {}; // デバッグ情報用
 
     // =================================================================
-    // 4. 初期化と���ットアップ (Initialization and Setup)
+    // 4. 初期化とセットアップ (Initialization and Setup)
     // =================================================================
     function main() {
         lucide.createIcons();
@@ -187,12 +188,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 img.src = src;
                 
                 img.onload = () => {
-                    // 最も信頼性の高いチェック：画像の本来の高さが利用可能か確認
                     if (img.naturalHeight > 0) {
                         assets[key] = img;
                         loaded.push(src.split('/').pop());
                     } else {
-                        // onloadが発火してもサイズが0の場合は失敗とみなす
                         assets[key] = null;
                         failed.push(src.split('/').pop() + ' (dims=0)');
                         console.error(`Image loaded but has zero dimensions: ${src}`);
@@ -242,8 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
         resetGameState(); 
         switchScreen('game');
 
-        // switchScreenで表示が切り替わった後、ブラウザの次の描画タイミングでリサイズを実行
-        // これにより、スマホでの描画遅延によるサイズ計算エラーを確実に防ぐ
         requestAnimationFrame(() => {
             resizeCanvas();
         });
@@ -280,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function endGame() {
         clearInterval(state.gameInterval);
         cancelAnimationFrame(state.animationFrameId);
-        dom.displays.finalScore.textContent = 0; // 表示をリセット
+        dom.displays.finalScore.textContent = 0;
         animateFinalScore(state.score);
         switchScreen('gameOver');
     }
@@ -334,71 +331,64 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
         }
 
-        // --- 描画処理 (常に実行) ---
-        ctx.clearRect(-50, -50, dom.canvas.width + 100, dom.canvas.height + 100); // 揺れを考慮して広めにクリア
+        ctx.clearRect(-50, -50, dom.canvas.width + 100, dom.canvas.height + 100);
 
-        // 1. まずフォールバック用の背景色で全��を塗りつぶす
-        ctx.fillStyle = '#d1e5f0';
-        ctx.fillRect(0, 0, dom.canvas.width, dom.canvas.height);
-
-        // 2. 背景画像を描画（成功すれば背景色を上書きする）
+        // 背景描画
         drawBackground();
 
-        // 3. 地面を描画
+        // 地面描画
         drawGround();
 
-        // 4. アイテム、障害物、プレイヤー、エフェクトの描画
+        // アイテム、障害物、プレイヤー、エフェクトの描画
         state.items.forEach(item => item.draw());
         state.obstacles.forEach(o => o.draw());
         state.player.draw();
         state.visualEffects.forEach(e => e.draw());
 
-        // 5. UIの更新
+        // UIの更新
         dom.displays.score.textContent = state.score;
         dom.displays.timer.textContent = state.timer;
 
-        // 6. デバッグ情報描画 (他のすべての要素の上に描画される)
-        ctx.fillStyle = 'black';
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'left';
-        let debugY = 20;
-        const log = (msg) => {
-            ctx.fillText(msg, 10, debugY);
-            debugY += 18;
-        };
-
-        log('--- DEBUG INFO ---');
-        const bgAsset = assets.background;
-        if (bgAsset) {
-            log(`assets.background: Loaded`);
-            log(`  naturalWidth: ${bgAsset.naturalWidth}`);
-            log(`  naturalHeight: ${bgAsset.naturalHeight}`);
-        } else {
-            log(`assets.background: Not loaded (null or undefined)`);
-        }
-        
-        if (debugInfo && debugInfo.failed && debugInfo.failed.length > 0) {
-            log(`debugInfo.failed: [${debugInfo.failed.join(', ')}]`);
-        } else {
-            log(`debugInfo.failed: []`);
-        }
-
-        // 7. 赤いフラッシュ演出 (ゲームオーバー時)
+        // 赤いフラッシュ演出
         if (state.isGameOverSequenceActive) {
             const flashOpacity = Math.max(0, state.gameOverEffectTimer / CONFIG.GAME_OVER_SEQUENCE_DURATION) * 0.7;
             ctx.fillStyle = `rgba(255, 0, 0, ${flashOpacity})`;
             ctx.fillRect(0, 0, dom.canvas.width, dom.canvas.height);
         }
         
-        ctx.restore(); // 描画状態を復元
+        ctx.restore();
     }
 
     function drawBackground() {
-        // draw関数本体でフォールバック背景色が描画されるようになったため、
-        // ここでは画像が読み込めている場合のみ描画処理を行う。
-        const bgImage = assets.background;
-        if (bgImage && bgImage.naturalHeight > 0) {
-            ctx.drawImage(bgImage, 0, 0, dom.canvas.width, dom.canvas.height);
+        if (loadedBackgroundImages.length > 0) {
+            const widthMultiplier = 1.5;
+            let totalWidth = 0;
+            
+            loadedBackgroundImages.forEach(img => {
+                if (img && img.height > 0) {
+                    totalWidth += (img.width * (dom.canvas.height / img.height)) * widthMultiplier;
+                }
+            });
+
+            if (totalWidth > 0) {
+                let x = state.backgroundScrollX % totalWidth;
+                if (x > 0) x -= totalWidth;
+                while (x < dom.canvas.width) {
+                    for (const img of loadedBackgroundImages) {
+                        if (img && img.height > 0) {
+                            const w = (img.width * (dom.canvas.height / img.height)) * widthMultiplier;
+                            if (w > 0) {
+                                ctx.drawImage(img, x, 0, w, dom.canvas.height);
+                                x += w;
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // フォールバック用の背景色
+            ctx.fillStyle = '#d1e5f0';
+            ctx.fillRect(0, 0, dom.canvas.width, dom.canvas.height);
         }
     }
 
@@ -538,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let i = 0; i < MAX_ATTEMPTS; i++) {
             const potentialItem = {
-                x: CONFIG.GAME_WIDTH + getRandomInt(0, 200), // 少しばらけさせる
+                x: CONFIG.GAME_WIDTH + getRandomInt(0, 200),
                 y: getRandomInt(state.groundY - 200, state.groundY - 80),
                 width: 45, height: 45, type: type,
             };
@@ -552,7 +542,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             for (const obstacle of state.obstacles) {
-                // 画面外の遠すぎる障害物はチェックしない
                 if (obstacle.x > CONFIG.GAME_WIDTH * 2) continue;
                 
                 if (isColliding(safetyZone, obstacle)) {
@@ -568,11 +557,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!item) {
-            // 10回試行しても安全な場所が見つからなかった場合は、今回はアイテムを生成しない
             return; 
         }
         
-        // 描画と特殊効果のロジックを追加
         item.draw = function() {
             const centerX = this.x + this.width / 2;
             const centerY = this.y + this.height / 2;
@@ -755,8 +742,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function animateFinalScore(finalScore) {
         const scoreElement = dom.displays.finalScore;
         let currentScore = 0;
-        const duration = 1200; // 1.2秒でアニメーション
-        const frameRate = 60; // ターゲットフレームレート
+        const duration = 1200;
+        const frameRate = 60;
         const totalFrames = duration / (1000 / frameRate);
         const increment = finalScore / totalFrames;
         
@@ -785,12 +772,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentBgm) {
             currentBgm.loop = true;
             currentBgm.volume = 0.3;
-            // ユーザーの操作を待たずに再生を試みる
             const playPromise = currentBgm.play();
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
-                    // 自動再生が失敗した場合は、ユーザーの操作を待つ。
-                    // エラーはコンソールに表示されるが、処理は続行する。
                     console.log("BGM autoplay was prevented by the browser.");
                 });
             }
@@ -818,7 +802,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function isColliding(rect1, rect2) { return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y; }
     function resizeCanvas() {
         const container = dom.canvas.parentElement;
-        // clientWidthが0の場合(非表示時など)は何もしない
         if (container.clientWidth === 0) return;
 
         const availableWidth = container.clientWidth;
@@ -832,9 +815,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.canvas.style.width = `${displayWidth}px`;
         dom.canvas.style.height = `${displayHeight}px`;
 
-        // state.groundYが未定義の場合は何もしない
         if (state.groundY && state.player) {
-            // リサイズ後にプレイヤーが地面に埋まらないように位置を再設定
             if (state.player.y + state.player.height > state.groundY) {
                 state.player.y = state.groundY - state.player.height;
             }
@@ -924,19 +905,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         dom.titleImage.addEventListener('click', startGame);
         
-        // --- スマホ・PC両対応の入力ハンドリング ---
         const gameScreen = dom.screens.game;
         gameScreen.addEventListener('mousedown', handleInput);
         gameScreen.addEventListener('touchstart', handleInput, { passive: false });
         window.addEventListener('keydown', (e) => { if (e.code === 'Space') handleInput(e); });
         
-        // ジャンプボタンのクリックが親要素(gameScreen)に伝播しないようにする
         dom.buttons.jump.addEventListener('click', (e) => {
             e.stopPropagation();
             handleInput(e);
         });
 
-        // スワイプによるページスクロールを防止
         window.addEventListener('touchmove', (e) => {
             if (state.currentScreen === 'game') {
                 e.preventDefault();
