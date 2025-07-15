@@ -334,27 +334,23 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- 描画処理 (常に実行) ---
         ctx.clearRect(-50, -50, dom.canvas.width + 100, dom.canvas.height + 100); // 揺れを考慮して広めにクリア
 
-        // 1. まずフォールバック用の背景色で全体を塗りつぶす
-        ctx.fillStyle = '#d1e5f0';
-        ctx.fillRect(0, 0, dom.canvas.width, dom.canvas.height);
-
-        // 2. 背景画像を描画（成功すれば背景色を上書きする）
+        // 背景描画 (この中でフォールバック色も描画される)
         drawBackground();
 
-        // 3. 地面を描画
+        // 地面描画
         drawGround();
 
-        // 4. アイテム、障害物、プレイヤー、エフェクトの描画
+        // アイテム、障害物、プレイヤー、エフェクトの描画
         state.items.forEach(item => item.draw());
         state.obstacles.forEach(o => o.draw());
         state.player.draw();
         state.visualEffects.forEach(e => e.draw());
 
-        // 5. UIの更新
+        // UIの更新
         dom.displays.score.textContent = state.score;
         dom.displays.timer.textContent = state.timer;
 
-        // 6. 赤いフラッシュ演出 (ゲームオーバー時)
+        // 赤いフラッシュ演出 (ゲームオーバー時)
         if (state.isGameOverSequenceActive) {
             const flashOpacity = Math.max(0, state.gameOverEffectTimer / CONFIG.GAME_OVER_SEQUENCE_DURATION) * 0.7;
             ctx.fillStyle = `rgba(255, 0, 0, ${flashOpacity})`;
@@ -365,7 +361,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawBackground() {
-        // この関数は、読み込み済みの画像がある場合にのみ描画を行う
+        // 1. まずフォールバック用の背景色で全体を塗りつぶす
+        ctx.fillStyle = '#d1e5f0';
+        ctx.fillRect(0, 0, dom.canvas.width, dom.canvas.height);
+
+        // 2. 読み込み済みの画像があれば、背景色の上に描画する
         if (loadedBackgroundImages.length > 0) {
             const widthMultiplier = 1.5;
             let totalWidth = 0;
@@ -392,7 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        // 画像がない場合のフォールバック(水色背景)は、呼び出し元のdraw()関数で処理される
     }
 
     function drawGround() {
