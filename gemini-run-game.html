@@ -171,13 +171,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadAssets() {
-        const promises = Object.entries(ASSET_PATHS).map(([key, src]) => new Promise(resolve => {
-            const img = new Image();
-            img.src = src;
-            img.onload = () => { assets[key] = img; resolve(); };
-            img.onerror = () => { assets[key] = null; console.error(`Failed to load: ${src}`); resolve(); };
-        }));
-        return Promise.all(promises);
+        const assetEntries = Object.entries(ASSET_PATHS);
+        // reduceを使ってPromiseチェーンを構築し、画像を1枚ずつ順番に読み込む
+        return assetEntries.reduce((promiseChain, [key, src]) => {
+            return promiseChain.then(() => new Promise(resolve => {
+                const img = new Image();
+                img.src = src;
+                img.onload = () => {
+                    assets[key] = img;
+                    resolve();
+                };
+                img.onerror = () => {
+                    assets[key] = null;
+                    console.error(`Failed to load image: ${src}`);
+                    // 1つの画像の読み込みに失敗しても、処理を止めずに次に進む
+                    resolve(); 
+                };
+            }));
+        }, Promise.resolve());
     }
     
     function loadAudio() {
