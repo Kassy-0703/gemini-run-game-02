@@ -286,8 +286,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const promises = Object.entries(AUDIO_PATHS).map(([key, src]) => new Promise(resolve => {
             const audio = new Audio();
             audio.src = src;
-            audio.oncanplaythrough = () => { audioAssets[key] = audio; resolve(); };
-            audio.onerror = () => { resolve(); };
+            audioAssets[key] = audio; // 先にセットしておく
+
+            let resolved = false;
+            const timeout = setTimeout(() => {
+                if (!resolved) {
+                    console.warn(`Audio loading timed out for: ${src}`);
+                    resolved = true;
+                    resolve();
+                }
+            }, 5000); // 5秒でタイムアウト
+
+            const done = () => {
+                if (!resolved) {
+                    clearTimeout(timeout);
+                    resolved = true;
+                    resolve();
+                }
+            };
+            
+            // oncanplaythroughの代わりに、より早く発生するloadeddataを使う
+            audio.addEventListener('loadeddata', done);
+            audio.addEventListener('error', done);
         }));
         return Promise.all(promises);
     }
