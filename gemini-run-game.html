@@ -19,9 +19,44 @@
             border: 2px solid #333;
             -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを消す */
         }
+        /* ローディングオーバーレイ用のスタイルを追加 */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            z-index: 9999;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans">
+
+    <!-- ローディングオーバーレイを追加 -->
+    <div id="loading-overlay">
+        <div class="loader"></div>
+        <p>Now Loading...</p>
+    </div>
 
     <div id="game-container" class="w-full max-w-2xl mx-auto p-4 text-center">
         <!-- (HTML部分は変更なし) -->
@@ -157,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     let state = {}; let assets = {}; let audioAssets = {}; let currentBgm = null, userInteracted = false;
     let gameInterval = null, animationFrameId = null;
+    let assetsLoaded = false; // アセット読み込み完了フラグを追加
     let debugInfo = {};
 
     // =================================================================
@@ -165,14 +201,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function main() {
         lucide.createIcons();
         setupEventListeners();
+        // ローディングオーバーレイをDOMに追加
+        const loadingOverlay = document.getElementById('loading-overlay');
+
         Promise.all([loadAssets(), loadAudio()]).then(([assetLoadResult]) => {
             debugInfo = assetLoadResult;
+            assetsLoaded = true; // 読み込み完了フラグを立てる
+            loadingOverlay.style.display = 'none'; // ローディング画面を非表示
             resizeCanvas();
             switchScreen('title');
             playBgm(audioAssets.bgmMenu);
         }).catch(error => { 
             console.error("Asset loading failed:", error);
             debugInfo = { error: error.message };
+            loadingOverlay.innerHTML = '<p>アセットの読み込みに失敗しました。<br>リフレッシュしてください。</p>';
             resizeCanvas(); 
             switchScreen('title'); 
         });
@@ -236,6 +278,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. ゲームの主要な流れ (Main Game Flow)
     // =================================================================
     function startGame() {
+        // アセットが読み込まれていなければゲームを開始しない
+        if (!assetsLoaded) {
+            alert("まだ準備中です。少し待ってからもう一度試してください。");
+            return;
+        }
+
         if (animationFrameId) {
             cancelAnimationFrame(animationFrameId);
         }
