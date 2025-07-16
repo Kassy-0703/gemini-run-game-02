@@ -19,7 +19,7 @@
             border: 2px solid #333;
             -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを消す */
         }
-        /* ローディングオーバーレイ用のスタイルを追加 */
+        /* ローディングオーバーレイ用のスタ���ルを追加 */
         #loading-overlay {
             position: fixed;
             top: 0;
@@ -48,19 +48,51 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        /* 音声確認ポップアップ用のスタイルを追加 */
+        #audio-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: black;
+            display: none; /* 初��状態は非表示 */
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        .popup-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            max-width: 90%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans">
 
-    <!-- ローディングオーバーレイを追加 -->
+    <!-- ローディングオーバーレイ -->
     <div id="loading-overlay">
         <div class="loader"></div>
         <p>Now Loading...</p>
     </div>
 
+    <!-- 音声確認ポップアップを追加 -->
+    <div id="audio-popup">
+        <div class="popup-content">
+            <h2 class="text-2xl font-bold mb-6">🎵 このゲームは音声が再生されます 🎵</h2>
+            <button id="audio-popup-button" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-xl">
+                クリックして開始
+            </button>
+        </div>
+    </div>
+
     <div id="game-container" class="w-full max-w-2xl mx-auto p-4 text-center">
         <!-- (HTML部分は変更なし) -->
-        <div id="title-screen" class="screen active flex-col items-center justify-center space-y-8 relative">
+        <div id="title-screen" class="screen flex-col items-center justify-center space-y-8 relative">
             <img id="title-image" src="images/title.png" alt="ゲームタイトル画像" class="w-full max-w-lg mx-auto mb-8 rounded-lg shadow-lg cursor-pointer">
             <div class="space-y-4 mb-8">
                 <button id="ranking-button" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg text-xl flex items-center justify-center space-x-2">
@@ -103,7 +135,7 @@
                 <div class="space-y-2">
                     <div class="flex items-center"><img src="images/item_score_up.png" alt="ちあき♡" class="w-5 h-5 mr-3"><span><strong>ちあき♡:</strong> スコアが500点アップ！</span></div>
                     <div class="flex items-center"><img src="images/item_invincible.png" alt="ラーメン" class="w-5 h-5 mr-3"><span><strong>ラーメン:</strong> ちょっとだけ無敵になる！</span></div>
-                    <div class="flex items-center"><img src="images/item_speed_up.png" alt="ギター" class="w-5 h-5 mr-3"><span><strong>ギター:</strong> しばらく移動速度アップ��</span></div>
+                    <div class="flex items-center"><img src="images/item_speed_up.png" alt="ギター" class="w-5 h-5 mr-3"><span><strong>ギター:</strong> しばらく移動速度アップ！</span></div>
                     <div class="flex items-center"><img src="images/item_jump_up.png" alt="お酒" class="w-5 h-5 mr-3"><span><strong>お酒:</strong> しばらくジャンプ力アップ！</span></div>
                 </div>
             </div>
@@ -179,11 +211,14 @@ document.addEventListener('DOMContentLoaded', () => {
             backToTitleFromAdmin: document.getElementById('back-to-title-from-admin'),
             resetRanking: document.getElementById('reset-ranking-button'),
             jump: document.getElementById('jump-button'),
+            audioPopup: document.getElementById('audio-popup-button'),
         },
         displays: { score: document.getElementById('score-display'), timer: document.getElementById('timer-display'), finalScore: document.getElementById('final-score'), effect: document.getElementById('effect-display'), adminMessage: document.getElementById('admin-message'), },
         inputs: { playerName: document.getElementById('player-name'), adminPassword: document.getElementById('admin-password'), },
         titleImage: document.getElementById('title-image'), canvas: document.getElementById('game-canvas'),
         rankingForm: document.getElementById('ranking-form'), rankingList: document.getElementById('ranking-list'),
+        loadingOverlay: document.getElementById('loading-overlay'),
+        audioPopup: document.getElementById('audio-popup'),
     };
     const ctx = dom.canvas.getContext('2d');
 
@@ -192,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     let state = {}; let assets = {}; let audioAssets = {}; let currentBgm = null, userInteracted = false;
     let gameInterval = null, animationFrameId = null;
-    let assetsLoaded = false; // アセット読み込み完了フラグを追加
+    let assetsLoaded = false;
     let debugInfo = {};
 
     // =================================================================
@@ -201,22 +236,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function main() {
         lucide.createIcons();
         setupEventListeners();
-        // ローディングオーバーレイをDOMに追加
-        const loadingOverlay = document.getElementById('loading-overlay');
-
+        
         Promise.all([loadAssets(), loadAudio()]).then(([assetLoadResult]) => {
             debugInfo = assetLoadResult;
-            assetsLoaded = true; // 読み込み完了フラグを立てる
-            loadingOverlay.style.display = 'none'; // ローディング画面を非表示
+            assetsLoaded = true;
+            dom.loadingOverlay.style.display = 'none';
+            dom.audioPopup.style.display = 'flex';
             resizeCanvas();
-            switchScreen('title');
-            playBgm(audioAssets.bgmMenu);
         }).catch(error => { 
             console.error("Asset loading failed:", error);
             debugInfo = { error: error.message };
-            loadingOverlay.innerHTML = '<p>アセットの読み込みに失敗しました。<br>リフレッシュしてください。</p>';
-            resizeCanvas(); 
-            switchScreen('title'); 
+            dom.loadingOverlay.innerHTML = '<p>アセットの読み込みに失敗しました。<br>リフレッシュしてください。</p>';
         });
     }
 
@@ -278,27 +308,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. ゲームの主要な流れ (Main Game Flow)
     // =================================================================
     function startGame() {
-        // アセットが読み込まれていなければゲームを開始しない
         if (!assetsLoaded) {
             alert("まだ準備中です。少し待ってからもう一度試してください。");
             return;
         }
 
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-        }
-        if (gameInterval) {
-            clearInterval(gameInterval);
-        }
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        if (gameInterval) clearInterval(gameInterval);
 
         playSfx(audioAssets.gameStart);
         resetGameState(); 
         switchScreen('game');
         playBgm(audioAssets.bgmGame);
 
-        requestAnimationFrame(() => {
-            resizeCanvas();
-        });
+        requestAnimationFrame(resizeCanvas);
         
         gameInterval = setInterval(() => {
             if (state.isGameOverSequenceActive) return;
@@ -318,12 +341,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function startGameOverSequence() {
         if (state.isGameOverSequenceActive) return;
         
-        if (currentBgm) {
-            currentBgm.pause();
-            currentBgm.currentTime = 0;
-        }
-
+        playBgm(audioAssets.bgmMenu); 
         playSfx(audioAssets.gameOver);
+
         state.isGameOverSequenceActive = true;
         state.gameOverEffectTimer = CONFIG.GAME_OVER_SEQUENCE_DURATION;
         createCollisionSparks(state.player.x + state.player.width / 2, state.player.y + state.player.height / 2);
@@ -336,9 +356,8 @@ document.addEventListener('DOMContentLoaded', () => {
         gameInterval = null;
 
         if (switchToGameOverScreen) {
-            dom.displays.finalScore.textContent = state.score; // Direct score display
+            dom.displays.finalScore.textContent = state.score;
             switchScreen('gameOver');
-            playBgm(audioAssets.bgmMenu);
         }
     }
 
@@ -813,6 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 10. ユーティリティとAPI (Utilities and API)
     // =================================================================
     function playBgm(bgm) {
+        if (!userInteracted || !bgm) return;
         if (currentBgm === bgm && !currentBgm.paused) return;
         if (currentBgm) {
             currentBgm.pause();
@@ -834,7 +854,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function switchScreen(screenName) {
         state.currentScreen = screenName;
         Object.values(dom.screens).forEach(s => s.classList.remove('active'));
-        dom.screens[screenName].classList.add('active');
+        if (dom.screens[screenName]) {
+            dom.screens[screenName].classList.add('active');
+        }
     }
     function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
     function isColliding(rect1, rect2) { return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y; }
@@ -916,7 +938,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleRankingReset() {
         const password = dom.inputs.adminPassword.value;
-        dom.displays.adminMessage.textContent = 'リセッ���中...';
+        dom.displays.adminMessage.textContent = 'リセット中...';
         try {
             const response = await fetch(`${CONFIG.API_BASE_URL}/rankings/reset`, {
                 method: 'POST',
@@ -932,15 +954,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupEventListeners() {
-        function handleFirstInteraction() {
+        dom.buttons.audioPopup.addEventListener('click', () => {
             if (userInteracted) return;
             userInteracted = true;
-            if (currentBgm && currentBgm.paused) {
-                playBgm(currentBgm);
-            }
-        }
-        document.body.addEventListener('click', handleFirstInteraction, { once: true });
-        document.body.addEventListener('keydown', handleFirstInteraction, { once: true });
+            dom.audioPopup.style.display = 'none';
+            switchScreen('title');
+            playBgm(audioAssets.bgmMenu);
+        }, { once: true });
 
         dom.titleImage.addEventListener('click', startGame);
         
@@ -974,11 +994,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         const backToTitleAction = () => {
-            // 1. ゲームを完全に停止させる
-            endGame(false); // falseを渡して、gameOver画面への遷移を抑制
-            // 2. ゲームの状態をリセットする
+            endGame(false);
             resetGameState();
-            // 3. 最後にタイトル画面へ遷移する
             switchScreen('title');
             playBgm(audioAssets.bgmMenu);
         };
