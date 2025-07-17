@@ -9,8 +9,12 @@
     <style>
         body { -webkit-user-select: none; user-select: none; }
         html, body {
-            overflow: hidden;
+            /* overflow: hidden; を削除し、下のクラスで制御 */
             touch-action: manipulation; /* スクロールやダブルタップズームを無効化 */
+        }
+        /* スクロールを禁止するためのクラス */
+        body.no-scroll {
+            overflow: hidden;
         }
         .screen { display: none; }
         .screen.active { display: flex; }
@@ -877,6 +881,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dom.screens[screenName]) {
             dom.screens[screenName].classList.add('active');
         }
+
+        // ゲーム画面のときだけスクロールを禁止し、それ以外（タイトル等）では許可する
+        if (screenName === 'game') {
+            document.body.classList.add('no-scroll');
+        } else {
+            document.body.classList.remove('no-scroll');
+        }
     }
     function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
     function isColliding(rect1, rect2) { return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y; }
@@ -905,22 +916,29 @@ document.addEventListener('DOMContentLoaded', () => {
     async function getRankings() {
         try {
             const response = await fetch(`${CONFIG.API_BASE_URL}/rankings`);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`ランキングの取得に失敗しました��� Status: ${response.status}`);
+            }
             return await response.json();
         } catch (error) {
-            console.error('Error fetching rankings:', error);
-            return [];
+            console.error('Error in getRankings:', error);
+            throw error; // エラーを呼び出し元に再スローする
         }
     }
     async function saveRanking(playerName, playerScore) {
         try {
-            await fetch(`${CONFIG.API_BASE_URL}/rankings`, {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/rankings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: playerName, score: playerScore }),
             });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`ランキングの保存に失敗しました。 Status: ${response.status}, Body: ${errorText}`);
+            }
         } catch (error) {
-            console.error('Error saving ranking:', error);
+            console.error('Error in saveRanking:', error);
+            throw error; // エラーを呼び出し元に再スローする
         }
     }
     async function displayRankings() {
@@ -947,12 +965,27 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleRankingSubmit(e) {
         e.preventDefault();
         const playerName = dom.inputs.playerName.value.trim();
-        if (playerName) {
+        if (!playerName) return;
+
+        const submitButton = dom.rankingForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = '登録中...';
+
+        try {
             await saveRanking(playerName, state.score);
             dom.inputs.playerName.value = '';
+            
             await displayRankings();
             switchScreen('ranking');
             playBgm(audioAssets.bgmMenu);
+
+        } catch (error) {
+            console.error("Ranking submission process failed:", error);
+            alert("エラーが発生しました。ランキングの登録に失敗した可能性があります。");
+            // エラーが起きても、finallyブロックでボタンは元に戻ります
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'ランキングに登録';
         }
     }
 
